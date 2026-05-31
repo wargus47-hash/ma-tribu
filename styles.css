@@ -1,0 +1,221 @@
+:root{
+  --bg:#eef2f4; --card:#ffffff; --ink:#16202b; --muted:#74808f;
+  --primary:#14756a; --primary-d:#0e564e; --primary-soft:#e2f0ee;
+  --accent:#ff7a59; --amber:#ffb020;
+  --grand:#3b82f6; --petit:#f97316; --deux:#8b5cf6;
+  --line:#e7ecef; --ok:#16a34a; --danger:#e2553f;
+  --radius:16px; --shadow:0 4px 16px rgba(20,40,40,.07);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; line-height:1.4;
+}
+button{font-family:inherit}
+
+/* Header */
+.app-header{
+  position:sticky; top:0; z-index:20; background:var(--primary); color:#fff;
+  padding:14px 18px 14px; max-width:520px; margin:0 auto; border-radius:0 0 20px 20px;
+}
+.app-header-row{display:flex; align-items:center; justify-content:space-between}
+.app-header h1{margin:0; font-size:21px; letter-spacing:.2px}
+.app-header p{margin:3px 0 0; opacity:.85; font-size:13px; text-transform:capitalize}
+.header-btn{background:rgba(255,255,255,.16); border:0; color:#fff; width:34px; height:34px; border-radius:50%; font-size:16px; cursor:pointer}
+
+/* Layout */
+#app{max-width:520px; margin:0 auto; padding:14px 14px 96px}
+.screen{animation:fade .18s ease}
+@keyframes fade{from{opacity:0; transform:translateY(4px)}to{opacity:1; transform:none}}
+
+/* Cards */
+.card{background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 14px; margin-bottom:14px}
+.card h2{margin:0 0 10px; font-size:16px; display:flex; align-items:center; gap:8px}
+.card .sub{color:var(--muted); font-size:13px; margin:-4px 0 10px}
+.section-title{font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin:18px 4px 8px}
+
+/* Buttons */
+.btn{border:0; border-radius:12px; padding:11px 14px; font-size:15px; font-weight:600; cursor:pointer; background:var(--primary-soft); color:var(--primary-d)}
+.btn-primary{background:var(--primary); color:#fff}
+.btn-accent{background:var(--accent); color:#fff}
+.btn-ghost{background:transparent; color:var(--primary); padding:8px 10px}
+.btn-block{display:block; width:100%; text-align:center}
+.btn-row{display:flex; gap:8px; flex-wrap:wrap}
+.btn-mini{font-size:13px; padding:7px 11px; border-radius:10px}
+
+/* Inputs */
+.input,.select{width:100%; border:1.5px solid var(--line); background:#fff; border-radius:12px; padding:11px 12px; font-size:15px; color:var(--ink)}
+.input:focus,.select:focus{outline:none; border-color:var(--primary)}
+.field-row{display:flex; gap:8px; margin-bottom:8px}
+.field-row .input{flex:1}
+.field-row .select{flex:0 0 42%}
+
+/* Chips */
+.chips{display:flex; flex-wrap:wrap; gap:8px}
+.chip{border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:7px 12px; font-size:13px; cursor:pointer; color:var(--ink)}
+.chip:active{transform:scale(.96)}
+.chip.add::before{content:"＋ "; color:var(--primary); font-weight:700}
+
+/* Lists / items */
+.list{display:flex; flex-direction:column; gap:2px}
+.item{display:flex; align-items:center; gap:10px; padding:11px 6px; border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item .check{width:24px; height:24px; border-radius:7px; border:2px solid #cdd6dc; flex:0 0 auto; display:flex; align-items:center; justify-content:center; font-size:14px; color:#fff; cursor:pointer}
+.item.done .check{background:var(--ok); border-color:var(--ok)}
+.item .label{flex:1; font-size:15px}
+.item.done .label{text-decoration:line-through; color:var(--muted)}
+.item .x{background:none; border:0; color:#c2ccd2; font-size:18px; cursor:pointer; padding:4px 6px}
+.item .tag{font-size:11px; padding:2px 7px; border-radius:999px; background:var(--primary-soft); color:var(--primary-d)}
+
+.rayon-group{margin-top:10px}
+.rayon-title{font-size:12px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:.4px; margin:8px 4px 2px}
+
+/* Tags by enfant */
+.item .tag.who-grand{background:#e6efff; color:var(--grand)}
+.item .tag.who-petit{background:#ffece0; color:var(--petit)}
+.item .tag.who-deux{background:#efe9ff; color:var(--deux)}
+
+/* Dashboard */
+.dash-hero{background:linear-gradient(135deg,var(--primary),#1b9d8d); color:#fff; border-radius:var(--radius); padding:16px; margin-bottom:14px; box-shadow:var(--shadow)}
+.dash-hero .big{font-size:18px; font-weight:700; margin:2px 0 0}
+.dash-hero .small{opacity:.9; font-size:13px}
+.dash-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.stat{background:var(--card); border-radius:14px; padding:12px; box-shadow:var(--shadow); cursor:pointer}
+.stat .n{font-size:22px; font-weight:800; color:var(--primary)}
+.stat .t{font-size:12px; color:var(--muted)}
+.quick{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:4px}
+.quick button{background:var(--card); border:0; box-shadow:var(--shadow); border-radius:14px; padding:14px 10px; font-size:14px; font-weight:600; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; color:var(--ink)}
+.quick button .e{font-size:22px}
+
+/* Calendar */
+.cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
+.cal-head button{background:var(--primary-soft); border:0; width:34px; height:34px; border-radius:10px; font-size:16px; cursor:pointer; color:var(--primary-d)}
+.cal-head .m{font-weight:700; text-transform:capitalize}
+.cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px}
+.cal-dow{font-size:11px; color:var(--muted); text-align:center; padding-bottom:2px}
+.cal-cell{aspect-ratio:1; border-radius:10px; border:1.5px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; cursor:pointer; color:var(--ink)}
+.cal-cell.empty{border:0; background:transparent; cursor:default}
+.cal-cell.on{background:var(--primary); color:#fff; border-color:var(--primary); font-weight:700}
+.cal-cell.today{box-shadow:0 0 0 2px var(--amber) inset}
+.legend{display:flex; gap:14px; margin-top:10px; font-size:12px; color:var(--muted); align-items:center}
+.legend .dot{display:inline-block; width:12px; height:12px; border-radius:4px; vertical-align:-1px; margin-right:5px}
+
+/* Day rows (repas) */
+.day-row{display:flex; align-items:center; gap:8px; padding:9px 0; border-bottom:1px solid var(--line)}
+.day-row:last-child{border-bottom:0}
+.day-row .d{flex:0 0 42px; font-size:12px; font-weight:700; color:var(--muted); text-transform:capitalize}
+.day-row .d.today{color:var(--primary)}
+.day-row .meal{flex:1; border:1.5px solid var(--line); border-radius:10px; padding:9px 10px; font-size:14px}
+.day-row .meal:focus{outline:none; border-color:var(--primary)}
+.day-row .ic{background:var(--primary-soft); border:0; width:36px; height:36px; border-radius:10px; font-size:16px; cursor:pointer}
+
+/* Empty */
+.empty{text-align:center; color:var(--muted); padding:18px 10px; font-size:14px}
+.empty .e{font-size:30px; display:block; margin-bottom:6px}
+
+/* Tabbar */
+.tabbar{position:fixed; bottom:0; left:0; right:0; display:flex; background:#fff; border-top:1px solid var(--line); max-width:520px; margin:0 auto; box-shadow:0 -2px 14px rgba(0,0,0,.05); padding-bottom:env(safe-area-inset-bottom)}
+.tab{flex:1; border:0; background:none; padding:9px 2px 11px; font-size:11px; color:var(--muted); display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer}
+.tab span{font-size:20px; line-height:1}
+.tab.is-active{color:var(--primary); font-weight:700}
+
+/* Toast */
+.toast{position:fixed; left:50%; bottom:80px; transform:translateX(-50%); background:#16202b; color:#fff; padding:11px 16px; border-radius:12px; font-size:14px; z-index:50; box-shadow:0 6px 20px rgba(0,0,0,.2); max-width:90%}
+
+/* Misc */
+.pill{display:inline-block; font-size:12px; padding:3px 10px; border-radius:999px; font-weight:600}
+.pill.yes{background:#e2f6ec; color:var(--ok)}
+.pill.no{background:#f1f3f5; color:var(--muted)}
+.divider{height:1px; background:var(--line); margin:12px 0}
+.muted{color:var(--muted); font-size:13px}
+
+/* ===== v2 ===== */
+/* Segmented control */
+.seg{display:flex; background:var(--primary-soft); border-radius:13px; padding:4px; gap:4px; margin-bottom:12px}
+.seg button{flex:1; border:0; background:transparent; padding:10px; border-radius:9px; font-weight:600; color:var(--primary-d); cursor:pointer; font-size:14px}
+.seg button.on{background:#fff; color:var(--primary); box-shadow:var(--shadow)}
+
+/* Repas : pastille midi/soir */
+.slotpill{flex:0 0 auto; font-size:10px; text-transform:uppercase; font-weight:800; letter-spacing:.4px; padding:4px 6px; border-radius:6px; background:#fff3da; color:#8a5a00}
+.slotpill.soir{background:#e4ebf2; color:#3a4a5e}
+
+/* Overlay plein écran (mode enfant / réglages) */
+.overlay{position:fixed; inset:0; z-index:100; background:var(--bg); overflow-y:auto; animation:fade .2s ease}
+.overlay-head{position:sticky; top:0; z-index:2; background:var(--primary); color:#fff; display:flex; align-items:center; gap:10px; padding:14px 16px}
+.overlay-head h2{margin:0; font-size:18px; flex:1}
+.overlay-close{background:rgba(255,255,255,.18); border:0; color:#fff; width:40px; height:40px; border-radius:11px; font-size:18px; cursor:pointer}
+.overlay-body{max-width:560px; margin:0 auto; padding:16px 16px 40px}
+
+/* Mode enfant */
+.kid-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+.kid-card{background:#fff; border-radius:22px; box-shadow:var(--shadow); padding:22px 10px; text-align:center; cursor:pointer; border:3px solid transparent; transition:transform .08s}
+.kid-card:active{transform:scale(.95)}
+.kid-card.done{background:#e6f7ee; border-color:var(--ok)}
+.kid-pict{font-size:54px; line-height:1; position:relative; display:inline-block}
+.kid-card.done .kid-pict::after{content:"✓"; position:absolute; right:-10px; top:-8px; background:var(--ok); color:#fff; width:28px; height:28px; border-radius:50%; font-size:17px; display:flex; align-items:center; justify-content:center}
+.kid-label{margin-top:12px; font-size:16px; font-weight:700; color:var(--ink)}
+.kid-card.done .kid-label{color:var(--ok)}
+.kid-bravo{text-align:center; font-size:22px; font-weight:800; color:var(--primary); padding:24px 10px}
+.kid-bravo .e{font-size:48px; display:block; margin-bottom:6px}
+
+/* Réglages */
+.set-section{margin-bottom:18px}
+.set-section h3{font-size:13px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); margin:0 0 8px 2px}
+.tel-link{color:var(--primary); text-decoration:none; font-weight:700}
+
+/* Budget */
+.budg-total{font-size:28px; font-weight:800; color:var(--primary); line-height:1}
+textarea.input{resize:vertical; font-family:inherit; line-height:1.4}
+
+/* ===== v3 ===== */
+.tag.late{background:#fde8e4; color:var(--danger)}
+.cal-cell.pending{box-shadow:0 0 0 2px var(--accent) inset; font-weight:700}
+.chip.del{border-color:var(--danger); color:var(--danger)}
+.hint{background:#fff7e8; border:1px solid #f4d68a; color:#7a5a00; border-radius:11px; padding:9px 12px; font-size:13px; margin-bottom:10px}
+.exch{display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.16); border-radius:11px; padding:8px 11px; margin-top:8px; font-size:13px; font-weight:600}
+.prog-row{display:flex; align-items:center; gap:10px; padding:10px 4px; border-bottom:1px solid var(--line); cursor:pointer}
+.prog-row:last-child{border-bottom:0}
+.prog-row .nm{flex:1; font-weight:600}
+.prog-bar{flex:0 0 84px; height:9px; background:var(--line); border-radius:6px; overflow:hidden}
+.prog-bar i{display:block; height:100%; background:var(--primary); border-radius:6px; transition:width .25s}
+.prog-row .ct{font-size:12px; color:var(--muted); flex:0 0 auto; min-width:30px; text-align:right}
+.prog-row .go{color:var(--primary); font-size:18px}
+
+/* ===== Peaufinage (finitions) ===== */
+*{-webkit-tap-highlight-color:transparent}
+button, .item[data-id], .item[data-rid], .item[data-nid], .stat, .quick button, .prog-row, .kid-card, .chip, .recipe{touch-action:manipulation}
+.btn{transition:transform .06s ease, filter .12s ease}
+.btn:active{transform:scale(.97)}
+.stat:active, .quick button:active, .prog-row:active{transform:scale(.985)}
+.item[data-id], .item[data-rid], .item[data-nid]{cursor:pointer; border-radius:9px; transition:background .12s}
+.item[data-id]:active, .item[data-rid]:active, .item[data-nid]:active{background:var(--primary-soft)}
+.check{transition:background .15s, border-color .15s}
+
+/* Safe-area (iPhone installé sur l'écran d'accueil) */
+.app-header{padding-top:calc(14px + env(safe-area-inset-top))}
+.overlay-head{padding-top:calc(14px + env(safe-area-inset-top))}
+
+/* Capitalisation de la 1re lettre des dates */
+.app-header p{text-transform:none}
+.app-header p::first-letter{text-transform:uppercase}
+
+/* Modal de confirmation (remplace les pop-ups système) */
+.backdrop{position:fixed; inset:0; background:rgba(10,22,22,.45); z-index:120; display:flex; align-items:center; justify-content:center; padding:24px; animation:fade .15s ease}
+.modal{background:#fff; border-radius:18px; padding:20px; max-width:360px; width:100%; box-shadow:0 16px 44px rgba(0,0,0,.28)}
+.modal p{margin:0 0 16px; font-size:15px; line-height:1.45}
+.modal .btn-row{justify-content:flex-end}
+
+/* Sélecteur de recette */
+.recipe{cursor:pointer}
+.recipe:active{background:var(--primary-soft)}
+.recipe .go{color:var(--primary); font-size:20px; font-weight:700}
+
+/* Mode enfant : petite fête animée */
+.kid-bravo{animation:pop .45s cubic-bezier(.2,1.3,.5,1)}
+@keyframes pop{0%{transform:scale(.6); opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1); opacity:1}}
+
+/* Carte de bienvenue (1er lancement) */
+.welcome{background:linear-gradient(135deg,#ffffff,#eef8f5); border:1px solid #cfe9e4; border-radius:var(--radius); padding:16px; margin-bottom:14px; box-shadow:var(--shadow)}
+.welcome h2{margin:0 0 4px; font-size:17px}
+.welcome ol{margin:8px 0 14px; padding-left:20px; font-size:14px; line-height:1.7}

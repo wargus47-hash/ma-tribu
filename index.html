@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#14756a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Ma Tribu</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-row">
+      <h1 id="screen-title">Aujourd'hui</h1>
+      <button id="btn-reset" class="header-btn" title="Réglages">⚙️</button>
+    </div>
+    <p id="screen-date"></p>
+  </header>
+
+  <main id="app">
+    <section class="screen" id="screen-accueil"></section>
+    <section class="screen" id="screen-courses" hidden></section>
+    <section class="screen" id="screen-repas" hidden></section>
+    <section class="screen" id="screen-garde" hidden></section>
+    <section class="screen" id="screen-famille" hidden></section>
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab is-active" data-tab="accueil"><span>🏠</span>Accueil</button>
+    <button class="tab" data-tab="courses"><span>🛒</span>Courses</button>
+    <button class="tab" data-tab="repas"><span>🍽️</span>Repas</button>
+    <button class="tab" data-tab="garde"><span>📅</span>Garde</button>
+    <button class="tab" data-tab="famille"><span>🧸</span>Famille</button>
+  </nav>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

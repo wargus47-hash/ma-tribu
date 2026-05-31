@@ -1,0 +1,15 @@
+{
+  "name": "Ma Tribu — organisation familiale",
+  "short_name": "Ma Tribu",
+  "description": "L'organisation de la maison, simplifiée : courses, repas, garde et routines.",
+  "lang": "fr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef2f4",
+  "theme_color": "#14756a",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
