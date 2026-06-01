@@ -45,7 +45,7 @@ button{font-family:inherit}
 .btn-mini{font-size:13px; padding:7px 11px; border-radius:10px}
 
 /* Inputs */
-.input,.select{width:100%; border:1.5px solid var(--line); background:#fff; border-radius:12px; padding:11px 12px; font-size:15px; color:var(--ink)}
+.input,.select{width:100%; border:1.5px solid var(--line); background:var(--card); border-radius:12px; padding:11px 12px; font-size:15px; color:var(--ink)}
 .input:focus,.select:focus{outline:none; border-color:var(--primary)}
 .field-row{display:flex; gap:8px; margin-bottom:8px}
 .field-row .input{flex:1}
@@ -53,7 +53,7 @@ button{font-family:inherit}
 
 /* Chips */
 .chips{display:flex; flex-wrap:wrap; gap:8px}
-.chip{border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:7px 12px; font-size:13px; cursor:pointer; color:var(--ink)}
+.chip{border:1.5px solid var(--line); background:var(--card); border-radius:999px; padding:7px 12px; font-size:13px; cursor:pointer; color:var(--ink)}
 .chip:active{transform:scale(.96)}
 .chip.add::before{content:"＋ "; color:var(--primary); font-weight:700}
 
@@ -94,7 +94,7 @@ button{font-family:inherit}
 .cal-head .m{font-weight:700; text-transform:capitalize}
 .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px}
 .cal-dow{font-size:11px; color:var(--muted); text-align:center; padding-bottom:2px}
-.cal-cell{aspect-ratio:1; border-radius:10px; border:1.5px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; cursor:pointer; color:var(--ink)}
+.cal-cell{aspect-ratio:1; border-radius:10px; border:1.5px solid var(--line); background:var(--card); display:flex; align-items:center; justify-content:center; font-size:14px; cursor:pointer; color:var(--ink)}
 .cal-cell.empty{border:0; background:transparent; cursor:default}
 .cal-cell.on{background:var(--primary); color:#fff; border-color:var(--primary); font-weight:700}
 .cal-cell.today{box-shadow:0 0 0 2px var(--amber) inset}
@@ -115,7 +115,7 @@ button{font-family:inherit}
 .empty .e{font-size:30px; display:block; margin-bottom:6px}
 
 /* Tabbar */
-.tabbar{position:fixed; bottom:0; left:0; right:0; display:flex; background:#fff; border-top:1px solid var(--line); max-width:520px; margin:0 auto; box-shadow:0 -2px 14px rgba(0,0,0,.05); padding-bottom:env(safe-area-inset-bottom)}
+.tabbar{position:fixed; bottom:0; left:0; right:0; display:flex; background:var(--card); border-top:1px solid var(--line); max-width:520px; margin:0 auto; box-shadow:0 -2px 14px rgba(0,0,0,.05); padding-bottom:env(safe-area-inset-bottom)}
 .tab{flex:1; border:0; background:none; padding:9px 2px 11px; font-size:11px; color:var(--muted); display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer}
 .tab span{font-size:20px; line-height:1}
 .tab.is-active{color:var(--primary); font-weight:700}
@@ -134,7 +134,7 @@ button{font-family:inherit}
 /* Segmented control */
 .seg{display:flex; background:var(--primary-soft); border-radius:13px; padding:4px; gap:4px; margin-bottom:12px}
 .seg button{flex:1; border:0; background:transparent; padding:10px; border-radius:9px; font-weight:600; color:var(--primary-d); cursor:pointer; font-size:14px}
-.seg button.on{background:#fff; color:var(--primary); box-shadow:var(--shadow)}
+.seg button.on{background:var(--card); color:var(--primary); box-shadow:var(--shadow)}
 
 /* Repas : pastille midi/soir */
 .slotpill{flex:0 0 auto; font-size:10px; text-transform:uppercase; font-weight:800; letter-spacing:.4px; padding:4px 6px; border-radius:6px; background:#fff3da; color:#8a5a00}
@@ -149,7 +149,7 @@ button{font-family:inherit}
 
 /* Mode enfant */
 .kid-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px}
-.kid-card{background:#fff; border-radius:22px; box-shadow:var(--shadow); padding:22px 10px; text-align:center; cursor:pointer; border:3px solid transparent; transition:transform .08s}
+.kid-card{background:var(--card); border-radius:22px; box-shadow:var(--shadow); padding:22px 10px; text-align:center; cursor:pointer; border:3px solid transparent; transition:transform .08s}
 .kid-card:active{transform:scale(.95)}
 .kid-card.done{background:#e6f7ee; border-color:var(--ok)}
 .kid-pict{font-size:54px; line-height:1; position:relative; display:inline-block}
@@ -202,7 +202,7 @@ button, .item[data-id], .item[data-rid], .item[data-nid], .stat, .quick button, 
 
 /* Modal de confirmation (remplace les pop-ups système) */
 .backdrop{position:fixed; inset:0; background:rgba(10,22,22,.45); z-index:120; display:flex; align-items:center; justify-content:center; padding:24px; animation:fade .15s ease}
-.modal{background:#fff; border-radius:18px; padding:20px; max-width:360px; width:100%; box-shadow:0 16px 44px rgba(0,0,0,.28)}
+.modal{background:var(--card); border-radius:18px; padding:20px; max-width:360px; width:100%; box-shadow:0 16px 44px rgba(0,0,0,.28)}
 .modal p{margin:0 0 16px; font-size:15px; line-height:1.45}
 .modal .btn-row{justify-content:flex-end}
 
@@ -228,3 +228,22 @@ button, .item[data-id], .item[data-rid], .item[data-nid], .stat, .quick button, 
 .steps li{margin-bottom:9px}
 .steps li:last-child{margin-bottom:0}
 .rinfo{background:none; border:0; color:var(--muted); font-size:18px; cursor:pointer; padding:2px 8px; flex:0 0 auto}
+
+/* ===== Apparence & options (v6) ===== */
+.opt-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 0; font-size:15px}
+.toggle{width:48px; height:28px; border-radius:999px; border:0; background:var(--line); position:relative; cursor:pointer; transition:background .15s; flex:0 0 auto}
+.toggle.on{background:var(--primary)}
+.toggle i{position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%; background:#fff; transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.toggle.on i{left:23px}
+.swatches{display:flex; gap:10px}
+.swatch{width:30px; height:30px; border-radius:50%; border:0; cursor:pointer; padding:0}
+.swatch.on{outline:3px solid var(--ink); outline-offset:2px}
+
+/* ===== Mode sombre ===== */
+body.theme-sombre{
+  --bg:#0f161b; --card:#1a242c; --ink:#e9eef3; --muted:#90a0ac; --line:#2b3640;
+  --primary-soft:#22303a; --primary-d:#cfe0e6; --shadow:0 6px 18px rgba(0,0,0,.45);
+}
+body.theme-sombre .welcome{background:var(--card); border-color:var(--line)}
+body.theme-sombre .hint{background:#2a2a1c; border-color:#544b1f; color:#e7d9a3}
+body.theme-sombre .slotpill{background:#3a3320; color:#f0d99a}

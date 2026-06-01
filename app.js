@@ -14,6 +14,21 @@ const JOURS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dim
 const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 const DOW = ['L','M','M','J','V','S','D'];
 
+/* Couleurs d'accent disponibles */
+const ACCENTS = {
+  teal:   { nom: 'Sapin',  primary: '#14756a', d: '#0e564e', soft: '#e2f0ee' },
+  bleu:   { nom: 'Océan',  primary: '#2563eb', d: '#1d4ed8', soft: '#e5edfd' },
+  violet: { nom: 'Mauve',  primary: '#7c3aed', d: '#5b21b6', soft: '#efe7fd' },
+  corail: { nom: 'Corail', primary: '#e0533f', d: '#b23a29', soft: '#fde7e2' }
+};
+function applyTheme() {
+  const a = ACCENTS[data.reglages.accent] || ACCENTS.teal;
+  const r = document.documentElement.style;
+  r.setProperty('--primary', a.primary); r.setProperty('--primary-d', a.d); r.setProperty('--primary-soft', a.soft);
+  document.body.classList.toggle('theme-sombre', data.reglages.theme === 'sombre');
+  const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.setAttribute('content', a.primary);
+}
+
 /* ---------- Utilitaires ---------- */
 let _seq = 0;
 function uid() { return 'id' + Date.now().toString(36) + (_seq++).toString(36); }
@@ -86,13 +101,31 @@ function seedRecettes() {
     { id: "r27", nom: "Crêpes (salées ou sucrées)", emoji: "🥞", temps: "30 min", portions: "4 pers.", ing: [["Farine","Épicerie salée"],["Œufs","Frais"],["Lait","Frais"],["Beurre","Frais"]], etapes: ["Mélange farine, œufs, lait et une pincée de sel jusqu'à une pâte lisse.","Laisse reposer si tu peux, puis cuis des crêpes fines à la poêle.","Garnis : jambon-fromage-œuf, ou sucre et confiture."] },
     { id: "r28", nom: "Gâteau au yaourt", emoji: "🍰", temps: "40 min", portions: "6 parts", ing: [["Yaourt","Frais"],["Farine","Épicerie salée"],["Sucre","Épicerie sucrée"],["Œufs","Frais"],["Huile","Épicerie salée"],["Levure","Épicerie sucrée"]], etapes: ["Préchauffe à 180°C. Le pot de yaourt sert de mesure.","Mélange 1 yaourt, 2 pots de sucre, 3 pots de farine, 3 œufs, 1/2 pot d'huile et 1 sachet de levure.","Verse dans un moule et cuis 30 min. Vérifie avec la lame d'un couteau."] },
     { id: "r29", nom: "Velouté de butternut", emoji: "🎃", temps: "35 min", portions: "4 pers.", ing: [["Courge butternut","Fruits & Légumes"],["Pommes de terre","Fruits & Légumes"],["Oignon","Fruits & Légumes"],["Crème fraîche","Frais"]], etapes: ["Épluche et coupe la courge, la pomme de terre et l'oignon.","Couvre d'eau, sale et cuis 25 min.","Mixe avec un peu de crème."] },
-    { id: "r30", nom: "Salade composée complète", emoji: "🥗", temps: "15 min", portions: "4 pers.", ing: [["Salade","Fruits & Légumes"],["Tomates","Fruits & Légumes"],["Maïs en boîte","Épicerie salée"],["Thon en boîte","Épicerie salée"],["Œufs","Frais"]], etapes: ["Lave et coupe la salade et les tomates.","Ajoute le maïs, le thon et les œufs durs en quartiers.","Assaisonne (huile, vinaigre, moutarde, sel)."] }
+    { id: "r30", nom: "Salade composée complète", emoji: "🥗", temps: "15 min", portions: "4 pers.", ing: [["Salade","Fruits & Légumes"],["Tomates","Fruits & Légumes"],["Maïs en boîte","Épicerie salée"],["Thon en boîte","Épicerie salée"],["Œufs","Frais"]], etapes: ["Lave et coupe la salade et les tomates.","Ajoute le maïs, le thon et les œufs durs en quartiers.","Assaisonne (huile, vinaigre, moutarde, sel)."] },
+    { id: "r31", nom: "Chili con carne", emoji: "🌶️", temps: "40 min", portions: "4 pers.", ing: [["Viande hachée","Viande & Poisson"],["Haricots rouges","Épicerie salée"],["Sauce tomate","Épicerie salée"],["Oignon","Fruits & Légumes"],["Poivron","Fruits & Légumes"],["Riz","Épicerie salée"]], etapes: ["Fais revenir l'oignon et le poivron en dés.","Ajoute la viande et fais-la dorer.","Ajoute les haricots rouges, la sauce tomate, des épices (cumin, paprika) et du sel. Mijote 20 min.","Sers avec du riz."] },
+    { id: "r32", nom: "Couscous poulet-merguez", emoji: "🥘", temps: "50 min", portions: "4 pers.", ing: [["Cuisses de poulet","Viande & Poisson"],["Merguez","Viande & Poisson"],["Semoule","Épicerie salée"],["Courgettes","Fruits & Légumes"],["Carottes","Fruits & Légumes"],["Pois chiches","Épicerie salée"],["Oignon","Fruits & Légumes"]], etapes: ["Fais dorer le poulet et les merguez, puis réserve.","Fais revenir l'oignon, les carottes et les courgettes en morceaux.","Ajoute les pois chiches, des épices à couscous et un peu d'eau, mijote 25 min avec les viandes.","Prépare la semoule (eau bouillante + beurre) et sers ensemble."] },
+    { id: "r33", nom: "Blanquette de poulet", emoji: "🍲", temps: "45 min", portions: "4 pers.", ing: [["Blanc de poulet","Viande & Poisson"],["Carottes","Fruits & Légumes"],["Champignons","Fruits & Légumes"],["Oignon","Fruits & Légumes"],["Crème fraîche","Frais"],["Riz","Épicerie salée"]], etapes: ["Coupe la viande en morceaux et fais-la cuire 20 min à l'eau avec carottes et oignon.","Fais revenir les champignons.","Prélève un peu de bouillon, lie-le avec la crème, remets tout et réchauffe sans bouillir.","Sers avec du riz."] },
+    { id: "r34", nom: "Burger maison & frites", emoji: "🍔", temps: "30 min", portions: "4 pers.", ing: [["Pains à burger","Petit-déj"],["Steak haché","Viande & Poisson"],["Cheddar","Frais"],["Salade","Fruits & Légumes"],["Tomates","Fruits & Légumes"],["Frites","Surgelés"],["Ketchup","Épicerie salée"]], etapes: ["Cuis les frites au four.","Poêle les steaks et pose une tranche de cheddar dessus pour la faire fondre.","Toaste les pains, garnis de sauce, salade, tomate et steak.","Sers avec les frites."] },
+    { id: "r35", nom: "Gratin de courgettes", emoji: "🥒", temps: "40 min", portions: "4 pers.", ing: [["Courgettes","Fruits & Légumes"],["Œufs","Frais"],["Crème fraîche","Frais"],["Gruyère râpé","Frais"],["Riz","Épicerie salée"]], etapes: ["Coupe les courgettes en rondelles et fais-les revenir 10 min.","Bats les œufs avec la crème et le gruyère, sel et poivre.","Mélange aux courgettes et verse dans un plat.","Gratine 20 min à 200°C. Sers avec du riz."] },
+    { id: "r36", nom: "Gnocchis à la crème", emoji: "🥟", temps: "20 min", portions: "4 pers.", ing: [["Gnocchis","Épicerie salée"],["Crème fraîche","Frais"],["Lardons","Frais"],["Gruyère râpé","Frais"]], etapes: ["Poêle les gnocchis quelques minutes (ou cuis-les à l'eau).","Ajoute les lardons et fais-les dorer.","Verse la crème, laisse épaissir et parsème de gruyère."] },
+    { id: "r37", nom: "Poulet basquaise", emoji: "🍗", temps: "45 min", portions: "4 pers.", ing: [["Cuisses de poulet","Viande & Poisson"],["Poivrons","Fruits & Légumes"],["Tomates","Fruits & Légumes"],["Oignon","Fruits & Légumes"],["Riz","Épicerie salée"]], etapes: ["Fais dorer le poulet puis réserve.","Fais revenir l'oignon et les poivrons en lanières.","Ajoute les tomates, remets le poulet et mijote 30 min.","Sers avec du riz."] },
+    { id: "r38", nom: "Wraps au poulet", emoji: "🌯", temps: "25 min", portions: "4 pers.", ing: [["Tortillas","Épicerie salée"],["Filets de poulet","Viande & Poisson"],["Salade","Fruits & Légumes"],["Tomates","Fruits & Légumes"],["Fromage râpé","Frais"]], etapes: ["Coupe le poulet en lanières et fais-le dorer.","Garnis chaque galette de salade, tomate, poulet, fromage et une sauce.","Roule serré et coupe en deux."] },
+    { id: "r39", nom: "Nouilles sautées au poulet", emoji: "🍜", temps: "25 min", portions: "4 pers.", ing: [["Nouilles chinoises","Épicerie salée"],["Filets de poulet","Viande & Poisson"],["Carottes","Fruits & Légumes"],["Poivron","Fruits & Légumes"],["Oignon","Fruits & Légumes"]], etapes: ["Cuis les nouilles et égoutte-les.","Fais sauter le poulet en lanières puis les légumes émincés.","Ajoute les nouilles et un peu de sauce soja, fais sauter 3 min."] },
+    { id: "r40", nom: "Dahl de lentilles corail", emoji: "🍲", temps: "30 min", portions: "4 pers.", ing: [["Lentilles corail","Épicerie salée"],["Lait de coco","Épicerie salée"],["Oignon","Fruits & Légumes"],["Tomates","Fruits & Légumes"],["Riz","Épicerie salée"]], etapes: ["Fais revenir l'oignon avec des épices (curry, cumin).","Ajoute les lentilles, les tomates, le lait de coco et un peu d'eau.","Mijote 20 min jusqu'à ce que les lentilles soient fondantes.","Sers avec du riz."] },
+    { id: "r41", nom: "Soupe à l'oignon gratinée", emoji: "🧅", temps: "40 min", portions: "4 pers.", ing: [["Oignons","Fruits & Légumes"],["Pain","Petit-déj"],["Gruyère râpé","Frais"],["Bouillon","Épicerie salée"],["Beurre","Frais"]], etapes: ["Émince les oignons et fais-les fondre 15 min au beurre jusqu'à ce qu'ils blondissent.","Ajoute le bouillon et mijote 15 min.","Verse en bols, pose du pain et du gruyère dessus.","Gratine au four quelques minutes."] },
+    { id: "r42", nom: "Gratin de poisson", emoji: "🐟", temps: "35 min", portions: "4 pers.", ing: [["Filets de poisson blanc","Viande & Poisson"],["Pommes de terre","Fruits & Légumes"],["Béchamel","Frais"],["Gruyère râpé","Frais"]], etapes: ["Cuis les pommes de terre coupées en rondelles.","Dispose le poisson et les pommes de terre dans un plat, nappe de béchamel.","Couvre de gruyère et gratine 20 min à 200°C."] },
+    { id: "r43", nom: "Escalope milanaise & spaghetti", emoji: "🍝", temps: "30 min", portions: "4 pers.", ing: [["Escalopes de poulet","Viande & Poisson"],["Chapelure","Épicerie salée"],["Œufs","Frais"],["Spaghetti","Épicerie salée"],["Sauce tomate","Épicerie salée"]], etapes: ["Panne les escalopes : farine, œuf battu, chapelure.","Poêle-les jusqu'à doré des deux côtés.","Cuis les spaghetti et réchauffe la sauce tomate.","Sers l'escalope sur les pâtes."] },
+    { id: "r44", nom: "Rôti de porc & pommes de terre", emoji: "🥩", temps: "1 h 15", portions: "4 pers.", ing: [["Rôti de porc","Viande & Poisson"],["Pommes de terre","Fruits & Légumes"],["Oignon","Fruits & Légumes"],["Ail","Fruits & Légumes"]], etapes: ["Préchauffe à 200°C. Pose le rôti dans un plat avec les pommes de terre, l'oignon et l'ail.","Sale, poivre, ajoute un filet d'huile.","Enfourne 1 h en arrosant, retourne à mi-cuisson.","Laisse reposer 5 min avant de découper."] },
+    { id: "r45", nom: "Crumble aux pommes", emoji: "🍏", temps: "40 min", portions: "6 parts", ing: [["Pommes","Fruits & Légumes"],["Farine","Épicerie salée"],["Beurre","Frais"],["Sucre","Épicerie sucrée"]], etapes: ["Préchauffe à 180°C. Épluche et coupe les pommes, mets-les dans un plat.","Mélange du bout des doigts farine, beurre et sucre jusqu'à une pâte sableuse.","Émiette sur les pommes.","Cuis 30 min jusqu'à ce que ce soit doré."] },
+    { id: "r46", nom: "Pain perdu", emoji: "🍞", temps: "20 min", portions: "4 pers.", ing: [["Pain rassis","Petit-déj"],["Œufs","Frais"],["Lait","Frais"],["Sucre","Épicerie sucrée"],["Beurre","Frais"]], etapes: ["Bats les œufs avec le lait et un peu de sucre.","Trempe les tranches de pain dedans.","Fais-les dorer à la poêle au beurre des deux côtés.","Saupoudre de sucre et sers tiède."] },
+    { id: "r47", nom: "Riz au lait", emoji: "🍚", temps: "30 min", portions: "4 pers.", ing: [["Riz rond","Épicerie salée"],["Lait","Frais"],["Sucre","Épicerie sucrée"],["Vanille","Épicerie sucrée"]], etapes: ["Verse le riz dans le lait avec le sucre et la vanille.","Cuis à feu doux 25 min en remuant souvent.","Laisse tiédir : il épaissit en refroidissant."] },
+    { id: "r48", nom: "Cookies maison", emoji: "🍪", temps: "25 min", portions: "12 cookies", ing: [["Farine","Épicerie salée"],["Beurre","Frais"],["Sucre","Épicerie sucrée"],["Œufs","Frais"],["Pépites de chocolat","Épicerie sucrée"]], etapes: ["Préchauffe à 180°C. Mélange le beurre mou et le sucre, ajoute l'œuf.","Incorpore la farine puis les pépites.","Dépose des petits tas sur une plaque.","Cuis 10 à 12 min : ils doivent rester moelleux au centre."] }
   ];
 }
 function seed() {
   return {
-    version: 5,
-    reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false },
+    version: 6,
+    reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false, theme: 'clair', accent: 'teal', midiSemaine: false },
     courses: [],
     recurrents: [
       { nom: 'Pommes', rayon: 'Fruits & Légumes' }, { nom: 'Bananes', rayon: 'Fruits & Légumes' }, { nom: 'Clémentines', rayon: 'Fruits & Légumes' },
@@ -144,6 +177,9 @@ function migrate() {
   const s = seed();
   data.reglages = data.reglages || s.reglages;
   if (data.reglages.welcomeDismissed === undefined) data.reglages.welcomeDismissed = false;
+  if (data.reglages.theme === undefined) data.reglages.theme = 'clair';
+  if (data.reglages.accent === undefined) data.reglages.accent = 'teal';
+  if (data.reglages.midiSemaine === undefined) data.reglages.midiSemaine = false;
   data.courses = data.courses || [];
   data.recurrents = data.recurrents || s.recurrents;
   data.recettes = seedRecettes().concat((data.recettes || []).filter((r) => !/^r\d+$/.test(r.id)));
@@ -157,7 +193,7 @@ function migrate() {
   if (!data.routines) data.routines = s.routines;
   else if (data.routines.matin || data.routines.soir) { const old = data.routines; data.routines = seedRoutines(); data.routines.petit = { matin: old.matin || [], soir: old.soir || [] }; }
   else { data.routines.petit = data.routines.petit || seedRoutines().petit; data.routines.grand = data.routines.grand || seedRoutines().grand; }
-  data.version = 5;
+  data.version = 6;
 }
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) { toast('⚠️ Sauvegarde impossible (mémoire pleine ?)'); } }
 
@@ -334,7 +370,7 @@ function renderCourses(el) {
     <div class="section-title">Ma liste ${restants ? '· ' + restants + ' à acheter' : ''}</div>
     <div class="card">
       ${listHtml}
-      ${data.courses.some((c) => c.fait) ? `<div class="btn-row" style="margin-top:12px"><button class="btn btn-mini" id="c-uncheck">Tout décocher</button><button class="btn btn-mini" id="c-clear">Retirer les articles cochés</button></div>` : ''}
+      ${data.courses.length ? `<div class="btn-row" style="margin-top:12px"><button class="btn btn-mini" id="c-share">📤 Partager la liste</button>${data.courses.some((c) => c.fait) ? `<button class="btn btn-mini" id="c-uncheck">Tout décocher</button><button class="btn btn-mini" id="c-clear">Retirer les cochés</button>` : ''}</div>` : ''}
     </div>
 
     <div class="section-title">💶 Budget courses</div>
@@ -373,6 +409,7 @@ function renderCourses(el) {
   });
   const unc = document.getElementById('c-uncheck'); if (unc) unc.addEventListener('click', () => { data.courses.forEach((c) => c.fait = false); save(); renderCourses(el); });
   const clr = document.getElementById('c-clear'); if (clr) clr.addEventListener('click', () => { data.courses = data.courses.filter((c) => !c.fait); save(); renderCourses(el); toast('Articles cochés retirés'); });
+  const sh = document.getElementById('c-share'); if (sh) sh.addEventListener('click', shareList);
 
   const addBg = () => { const montant = parseFloat(document.getElementById('bg-montant').value); if (isNaN(montant)) { toast('Indique un montant'); return; } data.budget.push({ id: uid(), date: todayISO(), montant, note: document.getElementById('bg-note').value.trim() }); save(); renderCourses(el); };
   document.getElementById('bg-add').addEventListener('click', addBg);
@@ -388,8 +425,9 @@ function renderRepas(el) {
   let rows = '';
   for (let i = 0; i < 7; i++) {
     const d = addDays(start, i); const key = iso(d); const isToday = key === ti; const abbr = JOURS[i].slice(0, 3);
-    if (i >= 5) rows += mealRowHtml(key, 'midi', abbr, d.getDate(), isToday, true);
-    rows += mealRowHtml(key, 'soir', abbr, d.getDate(), isToday, i >= 5);
+    const midi = i >= 5 || data.reglages.midiSemaine;
+    if (midi) rows += mealRowHtml(key, 'midi', abbr, d.getDate(), isToday, true);
+    rows += mealRowHtml(key, 'soir', abbr, d.getDate(), isToday, midi);
   }
   const end = addDays(start, 6);
   const label = `${start.getDate()} ${MOIS[start.getMonth()].slice(0, 4)}. – ${end.getDate()} ${MOIS[end.getMonth()].slice(0, 4)}.`;
@@ -767,7 +805,16 @@ function openReglages() {
           <button class="btn btn-block" id="bk-reset" style="color:var(--danger)">Tout réinitialiser</button>
         </div>
       </div>
-      <p class="muted" style="text-align:center">Ma Tribu · v4 · 100 % sur ton appareil</p>
+      <div class="set-section"><h3>🎨 Apparence & options</h3>
+        <div class="card">
+          <div class="opt-row"><span>🌙 Mode sombre</span><button class="toggle ${data.reglages.theme === 'sombre' ? 'on' : ''}" id="op-theme"><i></i></button></div>
+          <div class="divider"></div>
+          <div class="opt-row"><span>🎨 Couleur de l'appli</span><div class="swatches">${Object.keys(ACCENTS).map((k) => `<button class="swatch ${data.reglages.accent === k ? 'on' : ''}" data-acc="${k}" style="background:${ACCENTS[k].primary}" title="${ACCENTS[k].nom}"></button>`).join('')}</div></div>
+          <div class="divider"></div>
+          <div class="opt-row"><span>🍽️ Repas du midi en semaine</span><button class="toggle ${data.reglages.midiSemaine ? 'on' : ''}" id="op-midi"><i></i></button></div>
+        </div>
+      </div>
+      <p class="muted" style="text-align:center">Ma Tribu · v6 · 100 % sur ton appareil</p>
     </div>`;
   document.body.appendChild(ov);
   ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
@@ -777,6 +824,9 @@ function openReglages() {
   ov.querySelector('#bk-export').addEventListener('click', exportData);
   ov.querySelector('#bk-import').addEventListener('change', (e) => { if (e.target.files[0]) importData(e.target.files[0]); });
   ov.querySelector('#bk-reset').addEventListener('click', () => confirmDialog('Effacer TOUTES les données et repartir de zéro ?', () => { localStorage.removeItem(STORE_KEY); location.reload(); }, { danger: true, yes: 'Tout effacer' }));
+  ov.querySelector('#op-theme').addEventListener('click', () => { data.reglages.theme = data.reglages.theme === 'sombre' ? 'clair' : 'sombre'; save(); applyTheme(); openReglages(); });
+  ov.querySelectorAll('[data-acc]').forEach((b) => b.addEventListener('click', () => { data.reglages.accent = b.dataset.acc; save(); applyTheme(); openReglages(); }));
+  ov.querySelector('#op-midi').addEventListener('click', () => { data.reglages.midiSemaine = !data.reglages.midiSemaine; save(); openReglages(); });
 }
 function exportData() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -795,8 +845,19 @@ function importData(file) {
 }
 
 /* ---------- Démarrage ---------- */
+function shareList() {
+  const groups = {};
+  data.courses.filter((c) => !c.fait).forEach((c) => { (groups[c.rayon] = groups[c.rayon] || []).push(c.nom); });
+  if (!Object.keys(groups).length) { toast('Rien à partager (liste vide)'); return; }
+  let txt = '🛒 Liste de courses\n';
+  RAYONS.forEach((ry) => { if (groups[ry]) txt += `\n${ry} :\n` + groups[ry].map((n) => '• ' + n).join('\n') + '\n'; });
+  if (navigator.share) navigator.share({ title: 'Liste de courses', text: txt }).catch(() => {});
+  else if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => toast('Liste copiée ✓')).catch(() => toast('Copie impossible'));
+  else toast('Partage non disponible sur cet appareil');
+}
 function boot() {
   load();
+  applyTheme();
   document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
   document.getElementById('btn-reset').addEventListener('click', openReglages);
   setTab('accueil');
