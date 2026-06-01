@@ -33,7 +33,9 @@ function applyTheme() {
 function todayDow() { return (new Date().getDay() + 6) % 7; }
 function tempsMin(t) { if (!t) return 999; t = String(t).toLowerCase(); let m = 0; const h = t.match(/(\d+)\s*h/); if (h) m += parseInt(h[1], 10) * 60; const mn = t.match(/(\d+)\s*min/); if (mn) m += parseInt(mn[1], 10); if (!h && !mn) { const n = parseInt(t, 10); if (!isNaN(n)) m = n; } return m || 999; }
 const DESSERT_IDS = new Set(['r27', 'r28', 'r45', 'r46', 'r47', 'r48']);
-function seedSante() { const blank = () => ({ allergies: '', traitements: '', medecin: '', groupe: '', notes: [] }); return { petit: blank(), grand: blank() }; }
+function seedSante() { const blank = () => ({ allergies: '', traitements: '', medecin: '', groupe: '', notes: [], medicaments: [], mesures: [] }); return { petit: blank(), grand: blank() }; }
+function seedRecompenses() { const b = () => ({ etoiles: 0, objectif: 10, recompense: '' }); return { petit: b(), grand: b() }; }
+function soldeCoparent() { let s = 0; data.depenses.forEach((d) => { const part = (+d.montant || 0) / 2; if (d.payePar === 'moi') s += part; else s -= part; }); return s; }
 function nextAnnivInfo(s) {
   if (!s) return null; const p = s.split('-'); const mo = +p[1], da = +p[2]; if (!mo || !da) return null;
   const now = new Date(); now.setHours(0, 0, 0, 0); let d = new Date(now.getFullYear(), mo - 1, da); if (d < now) d = new Date(now.getFullYear() + 1, mo - 1, da);
@@ -155,8 +157,8 @@ function seedRecettes() {
 }
 function seed() {
   return {
-    version: 8,
-    reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false, theme: 'clair', accent: 'teal', midiSemaine: false, notifs: false, lastNotif: '' },
+    version: 9,
+    reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false, theme: 'clair', accent: 'teal', midiSemaine: false, notifs: false, lastNotif: '', consignesSitter: '' },
     courses: [],
     recurrents: [
       { nom: 'Pommes', rayon: 'Fruits & Légumes' }, { nom: 'Bananes', rayon: 'Fruits & Légumes' }, { nom: 'Clémentines', rayon: 'Fruits & Légumes' },
@@ -199,7 +201,13 @@ function seed() {
     anniversaires: [],
     favoris: [],
     listesExtra: [],
-    favJeux: []
+    favJeux: [],
+    favSorties: [],
+    depenses: [],
+    liaison: [],
+    vacances: [],
+    devoirs: [],
+    recompenses: seedRecompenses()
   };
 }
 
@@ -233,12 +241,20 @@ function migrate() {
   data.anniversaires = data.anniversaires || [];
   data.favoris = data.favoris || [];
   data.favJeux = data.favJeux || [];
+  data.favSorties = data.favSorties || [];
+  data.depenses = data.depenses || [];
+  data.liaison = data.liaison || [];
+  data.vacances = data.vacances || [];
+  data.devoirs = data.devoirs || [];
+  if (!data.recompenses) data.recompenses = seedRecompenses(); else { data.recompenses.petit = data.recompenses.petit || seedRecompenses().petit; data.recompenses.grand = data.recompenses.grand || seedRecompenses().grand; }
+  if (data.reglages.consignesSitter === undefined) data.reglages.consignesSitter = '';
   data.listesExtra = data.listesExtra || [];
-  if (!data.sante) data.sante = seedSante(); else { data.sante.petit = data.sante.petit || seedSante().petit; data.sante.grand = data.sante.grand || seedSante().grand; }
+  if (!data.sante) data.sante = seedSante();
+  ['petit', 'grand'].forEach((c) => { data.sante[c] = data.sante[c] || seedSante().petit; data.sante[c].notes = data.sante[c].notes || []; data.sante[c].medicaments = data.sante[c].medicaments || []; data.sante[c].mesures = data.sante[c].mesures || []; });
   if (!data.routines) data.routines = s.routines;
   else if (data.routines.matin || data.routines.soir) { const old = data.routines; data.routines = seedRoutines(); data.routines.petit = { matin: old.matin || [], soir: old.soir || [] }; }
   else { data.routines.petit = data.routines.petit || seedRoutines().petit; data.routines.grand = data.routines.grand || seedRoutines().grand; }
-  data.version = 8;
+  data.version = 9;
 }
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) { toast('⚠️ Sauvegarde impossible (mémoire pleine ?)'); } }
 
@@ -376,6 +392,9 @@ function renderAccueil(el) {
   const dc = el.querySelector('#d-cart');
   if (dc) dc.addEventListener('click', () => addRecetteToCourses(ti, 'soir'));
   const av = accueilTodayHtml(); if (av) el.insertAdjacentHTML('beforeend', av);
+  el.insertAdjacentHTML('beforeend', `<div class="section-title">Outils</div><div class="quick"><button id="ac-dep"><span class="e">💶</span>Dépenses partagées</button><button id="ac-sitter"><span class="e">🧑‍🍼</span>Mode baby-sitter</button></div>`);
+  el.querySelector('#ac-dep').addEventListener('click', openDepenses);
+  el.querySelector('#ac-sitter').addEventListener('click', openSitter);
 }
 function rappelLabel(s) {
   const diff = Math.round((parseISO(s) - parseISO(todayISO())) / 86400000);
@@ -396,7 +415,7 @@ function renderCourses(el) {
     const items = (groups[rayon] || []).sort((a, b) => (a.fait - b.fait));
     if (!items.length) return;
     listHtml += `<div class="rayon-group"><div class="rayon-title">${esc(rayon)}</div><div class="list">` +
-      items.map((c) => `<div class="item ${c.fait ? 'done' : ''}" data-id="${c.id}"><span class="check">${c.fait ? '✓' : ''}</span><span class="label">${esc(c.nom)}</span><button class="x" data-act="del">✕</button></div>`).join('') + `</div></div>`;
+      items.map((c) => `<div class="item ${c.fait ? 'done' : ''}" data-id="${c.id}"><span class="check">${c.fait ? '✓' : ''}</span><span class="label">${esc(c.nom)}${c.qte ? ` <span class="muted">(${esc(c.qte)})</span>` : ''}</span><button class="x" data-act="del">✕</button></div>`).join('') + `</div></div>`;
   });
   if (!data.courses.length) listHtml = `<div class="empty"><span class="e">🛒</span>Ta liste est vide. Ajoute un article ou tape un produit récurrent ci-dessous.</div>`;
 
@@ -406,8 +425,9 @@ function renderCourses(el) {
   el.innerHTML = `
     <div class="card">
       <div class="field-row">
-        <input class="input" id="c-nom" placeholder="Ajouter un article…" autocomplete="off" enterkeyhint="done" />
-        <select class="select" id="c-rayon">${RAYONS.map((r) => `<option>${r}</option>`).join('')}</select>
+        <input class="input" id="c-nom" placeholder="Article…" autocomplete="off" enterkeyhint="done" />
+        <input class="input" id="c-qte" placeholder="Qté" style="flex:0 0 20%" />
+        <select class="select" id="c-rayon" style="flex:0 0 34%">${RAYONS.map((r) => `<option>${r}</option>`).join('')}</select>
       </div>
       <button class="btn btn-primary btn-block" id="c-add">Ajouter à la liste</button>
     </div>
@@ -434,7 +454,7 @@ function renderCourses(el) {
       <div class="list" style="margin-top:8px">${[...data.budget].reverse().slice(0, 6).map((b) => `<div class="item budget" data-bid="${b.id}"><span class="label">${esc(b.note || 'Course')} <span class="muted">· ${esc(frShort(b.date))}</span></span><span class="tag">${eur(b.montant)} €</span><button class="x" data-delb>✕</button></div>`).join('')}</div>
     </div>`;
 
-  const addItem = () => { const nom = document.getElementById('c-nom').value.trim(); if (!nom) return; data.courses.push({ id: uid(), nom, rayon: document.getElementById('c-rayon').value, fait: false }); save(); renderCourses(el); };
+  const addItem = () => { const nom = document.getElementById('c-nom').value.trim(); if (!nom) return; data.courses.push({ id: uid(), nom, qte: document.getElementById('c-qte').value.trim(), rayon: document.getElementById('c-rayon').value, fait: false }); save(); renderCourses(el); };
   document.getElementById('c-add').addEventListener('click', addItem);
   document.getElementById('c-nom').addEventListener('keydown', (e) => { if (e.key === 'Enter') addItem(); });
 
@@ -717,8 +737,10 @@ function renderGarde(el) {
   document.getElementById('tr-add').addEventListener('click', addTr);
   document.getElementById('tr-nom').addEventListener('keydown', (e) => { if (e.key === 'Enter') addTr(); });
   document.getElementById('tr-reset').addEventListener('click', () => { data.transition.forEach((x) => x.fait = false); save(); renderGarde(el); toast('Sac réinitialisé — prêt pour le prochain échange'); });
-  el.insertAdjacentHTML('beforeend', activitesCardHtml());
+  el.insertAdjacentHTML('beforeend', activitesCardHtml() + vacancesCardHtml() + `<button class="btn btn-block" id="g-liaison" style="margin-top:4px">📓 Cahier de liaison co-parent</button>`);
   wireActivites(el);
+  wireVacances(el);
+  el.querySelector('#g-liaison').addEventListener('click', openLiaison);
 }
 
 /* ============================================================
@@ -803,8 +825,10 @@ function renderFamille(el) {
   });
   const ntClear = document.getElementById('nt-clear');
   if (ntClear) ntClear.addEventListener('click', () => { data.notes = data.notes.filter((n) => !n.fait); save(); renderFamille(el); });
-  el.insertAdjacentHTML('beforeend', santeButtonHtml(child) + anniversairesCardHtml());
+  el.insertAdjacentHTML('beforeend', santeButtonHtml(child) + recompensesCardHtml(child) + devoirsCardHtml() + anniversairesCardHtml());
   el.querySelector('#f-sante').addEventListener('click', () => openSante(child));
+  wireRecompenses(el, child);
+  wireDevoirs(el);
   wireAnniversaires(el);
 }
 function routineItems(child, mom) {
@@ -861,6 +885,9 @@ function openReglages() {
           <button class="btn btn-block" id="ct-add">Ajouter le contact</button>
         </div>
       </div>
+      <div class="set-section"><h3>🧑‍🍼 Consignes baby-sitter</h3>
+        <div class="card"><textarea class="input" id="set-consignes" rows="3" placeholder="Ce que la nounou doit savoir (horaires, repas, écrans, urgences…)">${esc(data.reglages.consignesSitter || '')}</textarea><button class="btn btn-block" id="set-consignes-save" style="margin-top:8px">Enregistrer</button></div>
+      </div>
       <div class="set-section"><h3>💾 Sauvegarde</h3>
         <div class="card">
           <p class="sub">Tes données sont sur cet appareil uniquement. Exporte-les de temps en temps (et pour les transférer sur ton téléphone).</p>
@@ -894,6 +921,7 @@ function openReglages() {
   ov.querySelectorAll('[data-acc]').forEach((b) => b.addEventListener('click', () => { data.reglages.accent = b.dataset.acc; save(); applyTheme(); openReglages(); }));
   ov.querySelector('#op-midi').addEventListener('click', () => { data.reglages.midiSemaine = !data.reglages.midiSemaine; save(); openReglages(); });
   ov.querySelector('#op-notif').addEventListener('click', () => { if (data.reglages.notifs) { data.reglages.notifs = false; save(); openReglages(); } else requestNotifs(); });
+  ov.querySelector('#set-consignes-save').addEventListener('click', () => { data.reglages.consignesSitter = ov.querySelector('#set-consignes').value.trim(); save(); toast('Consignes enregistrées'); });
 }
 function exportData() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -977,12 +1005,28 @@ function openSante(child) {
         <div class="field-row" style="margin-top:10px"><input class="input" id="sn-txt" placeholder="ex. Vaccin DTP" /><input class="input" id="sn-date" type="date" /></div>
         <button class="btn btn-block" id="sn-add">Ajouter</button>
       </div>
+      <div class="section-title">💊 Médicaments donnés</div>
+      <div class="card">
+        <div class="list">${s.medicaments.length ? [...s.medicaments].reverse().map((m) => `<div class="item" data-medid="${m.id}"><span class="label">${esc(m.nom)}${m.dose ? ' · ' + esc(m.dose) : ''} <span class="muted">· ${esc(m.quand || '')}</span></span><button class="x" data-meddel>✕</button></div>`).join('') : `<div class="empty"><span class="e">💊</span>Note chaque prise (anti double-dose entre les 2 maisons).</div>`}</div>
+        <div class="field-row" style="margin-top:10px"><input class="input" id="md-nom" placeholder="Médicament" /><input class="input" id="md-dose" placeholder="Dose" style="flex:0 0 32%" /></div>
+        <button class="btn btn-block" id="md-add">Ajouter (heure auto)</button>
+      </div>
+      <div class="section-title">📈 Croissance</div>
+      <div class="card">
+        <div class="list">${s.mesures.length ? [...s.mesures].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map((x) => `<div class="item" data-mesid="${x.id}"><span class="label">${x.taille ? esc(x.taille) + ' cm' : ''}${x.taille && x.poids ? ' · ' : ''}${x.poids ? esc(x.poids) + ' kg' : ''} <span class="muted">· ${esc(frShort(x.date))}</span></span><button class="x" data-mesdel>✕</button></div>`).join('') : `<div class="empty"><span class="e">📈</span>Note la taille et le poids de temps en temps.</div>`}</div>
+        <div class="field-row" style="margin-top:10px"><input class="input" id="ms-taille" type="number" inputmode="numeric" placeholder="Taille (cm)" /><input class="input" id="ms-poids" type="number" inputmode="decimal" step="0.1" placeholder="Poids (kg)" /></div>
+        <button class="btn btn-block" id="ms-add">Ajouter la mesure</button>
+      </div>
     </div>`;
   document.body.appendChild(ov);
   ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
   ov.querySelector('#sa-save').addEventListener('click', () => { s.groupe = ov.querySelector('#sa-groupe').value.trim(); s.allergies = ov.querySelector('#sa-allerg').value.trim(); s.traitements = ov.querySelector('#sa-trait').value.trim(); s.medecin = ov.querySelector('#sa-med').value.trim(); save(); toast('Carnet enregistré ✓'); });
   ov.querySelector('#sn-add').addEventListener('click', () => { const t = ov.querySelector('#sn-txt').value.trim(); if (!t) return; s.notes.push({ id: uid(), texte: t, date: ov.querySelector('#sn-date').value }); save(); openSante(child); });
   ov.querySelectorAll('[data-snid]').forEach((row) => row.querySelector('[data-sndel]').addEventListener('click', () => { s.notes = s.notes.filter((x) => x.id !== row.dataset.snid); save(); openSante(child); }));
+  ov.querySelector('#md-add').addEventListener('click', () => { const n = ov.querySelector('#md-nom').value.trim(); if (!n) return; const now = new Date(); const quand = frShort(todayISO()) + ' ' + String(now.getHours()).padStart(2, '0') + 'h' + String(now.getMinutes()).padStart(2, '0'); s.medicaments.push({ id: uid(), nom: n, dose: ov.querySelector('#md-dose').value.trim(), quand }); save(); openSante(child); });
+  ov.querySelectorAll('[data-medid]').forEach((row) => row.querySelector('[data-meddel]').addEventListener('click', () => { s.medicaments = s.medicaments.filter((x) => x.id !== row.dataset.medid); save(); openSante(child); }));
+  ov.querySelector('#ms-add').addEventListener('click', () => { const t = ov.querySelector('#ms-taille').value.trim(), p = ov.querySelector('#ms-poids').value.trim(); if (!t && !p) return; s.mesures.push({ id: uid(), date: todayISO(), taille: t, poids: p }); save(); openSante(child); });
+  ov.querySelectorAll('[data-mesid]').forEach((row) => row.querySelector('[data-mesdel]').addEventListener('click', () => { s.mesures = s.mesures.filter((x) => x.id !== row.dataset.mesid); save(); openSante(child); }));
 }
 
 function toggleFav(rid) { const i = data.favoris.indexOf(rid); if (i >= 0) data.favoris.splice(i, 1); else data.favoris.push(rid); save(); }
@@ -1020,6 +1064,165 @@ function renderListeExtra(el) {
   el.querySelector('#le-share').addEventListener('click', () => { const todo = l.items.filter((i) => !i.fait); if (!todo.length) { toast('Liste vide'); return; } const t = '📝 ' + l.nom + '\n' + todo.map((i) => '• ' + i.nom).join('\n'); if (navigator.share) navigator.share({ title: l.nom, text: t }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('Copié ✓')); });
   el.querySelector('#le-rename').addEventListener('click', () => { const n = prompt('Nouveau nom :', l.nom); if (n && n.trim()) { l.nom = n.trim(); save(); renderListeExtra(el); } });
   el.querySelector('#le-del').addEventListener('click', () => confirmDialog('Supprimer la liste « ' + l.nom + ' » ?', () => { data.listesExtra = data.listesExtra.filter((x) => x.id !== l.id); activeListe = 'main'; save(); renderCourses(el); }, { danger: true, yes: 'Supprimer' }));
+}
+
+/* ============================================================
+   v9 : dépenses partagées, liaison, baby-sitter, vacances,
+        récompenses, devoirs, sorties
+   ============================================================ */
+function openDepenses() {
+  closeOverlay();
+  const solde = soldeCoparent();
+  const cats = ['Cantine', 'Vêtements', 'Activités', 'Santé', 'École', 'Garde', 'Autre'];
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>💶 Dépenses partagées</h2></div>
+    <div class="overlay-body">
+      <div class="card" style="text-align:center">
+        <div class="budg-total" style="color:${solde >= 0 ? 'var(--ok)' : 'var(--danger)'}">${eur(Math.abs(solde))} €</div>
+        <div class="muted">${Math.abs(solde) < 0.01 ? 'Vous êtes à égalité 👍' : (solde > 0 ? "l'autre parent te doit" : "tu dois à l'autre parent")}</div>
+        <p class="muted" style="font-size:12px;margin-top:6px">Chaque dépense est partagée 50/50.</p>
+      </div>
+      <div class="card">
+        <div class="field-row"><input class="input" id="dp-montant" type="number" inputmode="decimal" step="0.01" placeholder="Montant €" /><select class="select" id="dp-qui"><option value="moi">J'ai payé</option><option value="autre">L'autre a payé</option></select></div>
+        <div class="field-row"><select class="select" id="dp-cat">${cats.map((c) => `<option>${c}</option>`).join('')}</select><input class="input" id="dp-note" placeholder="Note (ex. chaussures)" /></div>
+        <button class="btn btn-primary btn-block" id="dp-add">Ajouter la dépense</button>
+      </div>
+      <div class="section-title">Historique</div>
+      <div class="card"><div class="list">${data.depenses.length ? [...data.depenses].reverse().map((d) => `<div class="item" data-dpid="${d.id}"><span class="label">${esc(d.note || d.cat)} <span class="muted">· ${esc(d.cat)} · ${esc(frShort(d.date))} · ${d.payePar === 'moi' ? 'toi' : "l'autre"}</span></span><span class="tag">${eur(d.montant)} €</span><button class="x" data-dpdel>✕</button></div>`).join('') : `<div class="empty"><span class="e">💶</span>Aucune dépense pour l'instant.</div>`}</div></div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
+  ov.querySelector('#dp-add').addEventListener('click', () => { const m = parseFloat(ov.querySelector('#dp-montant').value); if (isNaN(m)) { toast('Indique un montant'); return; } data.depenses.push({ id: uid(), date: todayISO(), montant: m, payePar: ov.querySelector('#dp-qui').value, cat: ov.querySelector('#dp-cat').value, note: ov.querySelector('#dp-note').value.trim() }); save(); openDepenses(); });
+  ov.querySelectorAll('[data-dpid]').forEach((row) => row.querySelector('[data-dpdel]').addEventListener('click', () => { data.depenses = data.depenses.filter((x) => x.id !== row.dataset.dpid); save(); openDepenses(); }));
+}
+
+function openLiaison() {
+  closeOverlay();
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  const sorted = [...data.liaison].reverse();
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>📓 Cahier de liaison</h2></div>
+    <div class="overlay-body">
+      <p class="muted" style="margin:0 2px 10px">Note ce qu'il faut transmettre à l'autre parent, puis partage-le à l'échange.</p>
+      <div class="card"><div class="field-row"><input class="input" id="li-txt" placeholder="Ex. a eu de la fièvre, doit rendre son livre lundi…" enterkeyhint="done" /></div><button class="btn btn-primary btn-block" id="li-add">Ajouter</button></div>
+      ${data.liaison.length ? `<button class="btn btn-block" id="li-share" style="margin-bottom:12px">📤 Partager le cahier</button>` : ''}
+      <div class="card"><div class="list">${sorted.length ? sorted.map((n) => `<div class="item" data-liid="${n.id}"><span class="label">${esc(n.texte)}<br><span class="muted" style="font-size:12px">${esc(frShort(n.date))}</span></span><button class="x" data-lidel>✕</button></div>`).join('') : `<div class="empty"><span class="e">📓</span>Rien à transmettre pour l'instant.</div>`}</div></div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
+  const add = () => { const t = ov.querySelector('#li-txt').value.trim(); if (!t) return; data.liaison.push({ id: uid(), date: todayISO(), texte: t }); save(); openLiaison(); };
+  ov.querySelector('#li-add').addEventListener('click', add);
+  ov.querySelector('#li-txt').addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
+  const sh = ov.querySelector('#li-share'); if (sh) sh.addEventListener('click', () => { const t = '📓 Cahier de liaison\n' + [...data.liaison].reverse().map((n) => '• [' + frShort(n.date) + '] ' + n.texte).join('\n'); if (navigator.share) navigator.share({ title: 'Cahier de liaison', text: t }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('Copié ✓')); });
+  ov.querySelectorAll('[data-liid]').forEach((row) => row.querySelector('[data-lidel]').addEventListener('click', () => { data.liaison = data.liaison.filter((x) => x.id !== row.dataset.liid); save(); openLiaison(); }));
+}
+
+function openSitter() {
+  closeOverlay();
+  const acts = data.activites.filter((a) => a.jour === todayDow()).sort((a, b) => (a.heure || '').localeCompare(b.heure || ''));
+  const childBlock = (c) => { const s = data.sante[c]; const nom = c === 'petit' ? data.reglages.petit : data.reglages.grand; return `<div class="section-title">${esc(nom)}</div><div class="card">${s.allergies ? `<p style="margin:0 0 8px"><b>⚠️ Allergies :</b> ${esc(s.allergies)}</p>` : ''}${s.traitements ? `<p style="margin:0 0 8px"><b>💊 Traitement :</b> ${esc(s.traitements)}</p>` : ''}<div class="muted" style="font-size:13px;margin-bottom:6px">Routine du soir</div><div class="list">${data.routines[c].soir.map((it) => `<div class="item"><span class="label">${pictoFor(it.texte)} ${esc(it.texte)}</span></div>`).join('')}</div></div>`; };
+  const contacts = data.contacts.map((c) => `<div class="item"><span class="label"><b>${esc(c.nom)}</b>${c.role ? ' · ' + esc(c.role) : ''}${c.tel ? `<br><a class="tel-link" href="tel:${esc(c.tel)}">📞 ${esc(c.tel)}</a>` : ''}</span></div>`).join('');
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>🧑‍🍼 Mode baby-sitter</h2></div>
+    <div class="overlay-body">
+      ${data.reglages.consignesSitter ? `<div class="jbut">📋 ${esc(data.reglages.consignesSitter)}</div>` : ''}
+      ${acts.length ? `<div class="section-title">Aujourd'hui</div><div class="card"><div class="list">${acts.map((a) => `<div class="item"><span class="label">📆 ${a.heure ? '<b>' + esc(a.heure) + '</b> · ' : ''}${esc(a.nom)}</span></div>`).join('')}</div></div>` : ''}
+      ${childBlock('petit')}${childBlock('grand')}
+      <div class="section-title">📞 Contacts utiles</div>
+      <div class="card"><div class="list">${contacts || '<div class="empty">Ajoute des contacts dans les Réglages.</div>'}</div></div>
+      <p class="muted" style="text-align:center;font-size:12px">Pour modifier : Famille (🩺), Réglages (consignes, contacts) et Garde.</p>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
+}
+
+function vacancesCardHtml() {
+  const list = [...data.vacances].sort((a, b) => (a.debut || '').localeCompare(b.debut || ''));
+  const whoLabel = { moi: 'Avec toi', autre: "Chez l'autre", deux: 'À répartir' };
+  const body = list.length ? list.map((v) => `<div class="item" data-vacid="${v.id}"><span class="label">🏖️ ${esc(v.nom)}<br><span class="muted" style="font-size:12px">${esc(frShort(v.debut))} → ${esc(frShort(v.fin))}</span></span><span class="tag">${esc(whoLabel[v.qui] || '')}</span><button class="x" data-vacdel>✕</button></div>`).join('') : `<div class="empty"><span class="e">🏖️</span>Ajoute les vacances scolaires et qui a les enfants.</div>`;
+  return `<div class="section-title">🏖️ Vacances scolaires</div><div class="card">${body}
+    <div class="field-row" style="margin-top:12px"><input class="input" id="vac-nom" placeholder="Ex. Vacances de février" /><select class="select" id="vac-qui"><option value="moi">Avec toi</option><option value="autre">Chez l'autre</option><option value="deux">À répartir</option></select></div>
+    <div class="field-row"><input class="input" id="vac-debut" type="date" /><input class="input" id="vac-fin" type="date" /></div>
+    <button class="btn btn-block" id="vac-add">Ajouter</button></div>`;
+}
+function wireVacances(scope) {
+  scope.querySelector('#vac-add').addEventListener('click', () => { const nom = scope.querySelector('#vac-nom').value.trim(); const debut = scope.querySelector('#vac-debut').value; const fin = scope.querySelector('#vac-fin').value; if (!nom || !debut) { toast('Nom + date de début requis'); return; } data.vacances.push({ id: uid(), nom, debut, fin: fin || debut, qui: scope.querySelector('#vac-qui').value }); save(); render(); });
+  scope.querySelectorAll('[data-vacid]').forEach((row) => row.querySelector('[data-vacdel]').addEventListener('click', () => { data.vacances = data.vacances.filter((x) => x.id !== row.dataset.vacid); save(); render(); }));
+}
+
+function recompensesCardHtml(child) {
+  const r = data.recompenses[child]; const nom = child === 'petit' ? data.reglages.petit : data.reglages.grand;
+  const stars = '⭐'.repeat(Math.min(r.etoiles, r.objectif)) + '▫️'.repeat(Math.max(0, r.objectif - r.etoiles));
+  const atteint = r.etoiles >= r.objectif;
+  return `<div class="section-title">⭐ Récompenses — ${esc(nom)}</div><div class="card">
+    <div style="font-size:20px;text-align:center;letter-spacing:2px;line-height:1.5;word-break:break-word">${stars}</div>
+    <div class="muted" style="text-align:center;margin:6px 0">${r.etoiles} / ${r.objectif} étoiles${r.recompense ? ' · 🎁 ' + esc(r.recompense) : ''}</div>
+    ${atteint ? `<div class="jbut" style="text-align:center">🎉 Objectif atteint !${r.recompense ? ' ' + esc(r.recompense) : ''}</div>` : ''}
+    <div class="btn-row" style="justify-content:center"><button class="btn btn-mini" id="rc-moins">－</button><button class="btn btn-mini btn-primary" id="rc-plus">＋ 1 étoile</button><button class="btn btn-mini" id="rc-rz">↻</button></div>
+    <div class="field-row" style="margin-top:10px"><input class="input" id="rc-obj" type="number" inputmode="numeric" value="${r.objectif}" placeholder="Objectif" /><input class="input" id="rc-cadeau" value="${esc(r.recompense)}" placeholder="Récompense (ex. ciné)" /></div>
+    <button class="btn btn-mini btn-block" id="rc-save">Enregistrer l'objectif</button></div>`;
+}
+function wireRecompenses(scope, child) {
+  const r = data.recompenses[child];
+  scope.querySelector('#rc-plus').addEventListener('click', () => { r.etoiles++; save(); renderFamille(scope); if (r.etoiles === r.objectif) toast('🎉 Objectif atteint !'); });
+  scope.querySelector('#rc-moins').addEventListener('click', () => { if (r.etoiles > 0) r.etoiles--; save(); renderFamille(scope); });
+  scope.querySelector('#rc-rz').addEventListener('click', () => { r.etoiles = 0; save(); renderFamille(scope); });
+  scope.querySelector('#rc-save').addEventListener('click', () => { const o = parseInt(scope.querySelector('#rc-obj').value, 10); if (o > 0) r.objectif = o; r.recompense = scope.querySelector('#rc-cadeau').value.trim(); save(); renderFamille(scope); toast('Objectif enregistré'); });
+}
+
+function devoirsCardHtml() {
+  const list = [...data.devoirs].sort((a, b) => (a.fait - b.fait) || (a.pour || '').localeCompare(b.pour || ''));
+  const body = list.length ? list.map((d) => `<div class="item ${d.fait ? 'done' : ''}" data-dvid="${d.id}"><span class="check">${d.fait ? '✓' : ''}</span><span class="label">${esc(d.texte)}${d.matiere ? ` <span class="muted">· ${esc(d.matiere)}</span>` : ''}${d.pour ? ` <span class="tag">${esc(rappelLabel(d.pour))}</span>` : ''}</span><button class="x" data-act="del">✕</button></div>`).join('') : `<div class="empty"><span class="e">🎒</span>Note les devoirs « pour demain ».</div>`;
+  return `<div class="section-title">🎒 Devoirs & école</div><div class="card"><div class="list">${body}</div>
+    <div class="field-row" style="margin-top:12px"><input class="input" id="dv-txt" placeholder="Ex. Lire p.20, poésie…" /><input class="input" id="dv-mat" placeholder="Matière" style="flex:0 0 32%" /></div>
+    <div class="field-row"><input class="input" id="dv-pour" type="date" /><button class="btn btn-primary" id="dv-add">Ajouter</button></div>
+    ${data.devoirs.some((d) => d.fait) ? `<button class="btn btn-mini" id="dv-clear">Nettoyer les devoirs faits</button>` : ''}</div>`;
+}
+function wireDevoirs(scope) {
+  scope.querySelector('#dv-add').addEventListener('click', () => { const t = scope.querySelector('#dv-txt').value.trim(); if (!t) return; data.devoirs.push({ id: uid(), texte: t, matiere: scope.querySelector('#dv-mat').value.trim(), pour: scope.querySelector('#dv-pour').value, fait: false }); save(); renderFamille(scope); });
+  scope.querySelectorAll('[data-dvid]').forEach((row) => { const id = row.dataset.dvid; wireRow(row, () => { const d = data.devoirs.find((x) => x.id === id); d.fait = !d.fait; save(); renderFamille(scope); }, () => { data.devoirs = data.devoirs.filter((x) => x.id !== id); save(); renderFamille(scope); }); });
+  const c = scope.querySelector('#dv-clear'); if (c) c.addEventListener('click', () => { data.devoirs = data.devoirs.filter((d) => !d.fait); save(); renderFamille(scope); });
+}
+
+/* Sorties */
+const SORTIES = [
+  { id: 's1', nom: 'Parc / aire de jeux', emoji: '🛝', cat: 'Nature', lieu: 'ext', cout: 'Gratuit', desc: "Toboggans, ballon, vélo. Emporte un goûter et de l'eau." },
+  { id: 's2', nom: 'Balade en forêt', emoji: '🌲', cat: 'Nature', lieu: 'ext', cout: 'Gratuit', desc: 'Ramasser des feuilles, observer les animaux, faire du land art avec ce qu on trouve.' },
+  { id: 's3', nom: 'Bibliothèque / médiathèque', emoji: '📚', cat: 'Culture', lieu: 'int', cout: 'Gratuit', desc: 'Lire, emprunter des livres, souvent un coin jeux pour les petits.' },
+  { id: 's4', nom: 'Musée', emoji: '🏛️', cat: 'Culture', lieu: 'int', cout: 'Petit budget', desc: 'Souvent gratuit pour les moins de 12 ans. Choisis-en un adapté (sciences, nature).' },
+  { id: 's5', nom: 'Piscine', emoji: '🏊', cat: 'Sport', lieu: 'int', cout: 'Petit budget', desc: 'Toujours un succès. Brassards pour le petit.' },
+  { id: 's6', nom: 'Pique-nique', emoji: '🧺', cat: 'Nature', lieu: 'ext', cout: 'Gratuit', desc: 'Au parc ou dans le jardin. Laisse-les préparer le panier avec toi.' },
+  { id: 's7', nom: 'Vélo / trottinette', emoji: '🚲', cat: 'Sport', lieu: 'ext', cout: 'Gratuit', desc: 'Une boucle dans le quartier ou une voie verte. Casque obligatoire.' },
+  { id: 's8', nom: 'Plage ou lac', emoji: '🏖️', cat: 'Nature', lieu: 'ext', cout: 'Gratuit', desc: 'Châteaux de sable, baignade surveillée, ricochets.' },
+  { id: 's9', nom: 'Ferme pédagogique', emoji: '🐄', cat: 'Nature', lieu: 'ext', cout: 'Petit budget', desc: 'Nourrir et caresser les animaux : top pour le petit.' },
+  { id: 's10', nom: 'Cinéma', emoji: '🎬', cat: 'Culture', lieu: 'int', cout: 'Petit budget', desc: 'Un film adapté à leur âge, avec du pop-corn.' },
+  { id: 's11', nom: 'Patinoire', emoji: '⛸️', cat: 'Sport', lieu: 'int', cout: 'Petit budget', desc: 'Fous rires garantis. Gants conseillés.' },
+  { id: 's12', nom: 'Cueillette de saison', emoji: '🍓', cat: 'Nature', lieu: 'ext', cout: 'Petit budget', desc: 'Fraises, pommes selon la saison : on cueille et on cuisine après.' },
+  { id: 's13', nom: 'Atelier cuisine maison', emoji: '👨‍🍳', cat: 'Maison', lieu: 'int', cout: 'Gratuit', desc: "Faites une recette ensemble (cookies, pizza). Voir l'onglet Repas !" },
+  { id: 's14', nom: 'Géocaching', emoji: '📍', cat: 'Aventure', lieu: 'ext', cout: 'Gratuit', desc: 'Chasse au trésor avec une appli gratuite : on cherche des caches cachées près de chez toi.' },
+  { id: 's15', nom: 'Bowling', emoji: '🎳', cat: 'Sport', lieu: 'int', cout: 'Budget', desc: 'Avec les rampes pour les petits. Très festif.' },
+  { id: 's16', nom: 'Parc animalier / zoo', emoji: '🦁', cat: 'Nature', lieu: 'ext', cout: 'Budget', desc: "Une grande sortie. Prévois la journée et le pique-nique." },
+  { id: 's17', nom: 'Jardinage', emoji: '🌱', cat: 'Maison', lieu: 'ext', cout: 'Gratuit', desc: 'Planter des graines, arroser : ils adorent voir pousser.' },
+  { id: 's18', nom: 'Accrobranche', emoji: '🌳', cat: 'Aventure', lieu: 'ext', cout: 'Budget', desc: 'Dès 4-5 ans sur les parcours adaptés. Sensations garanties !' }
+];
+let jeuxMode = 'jeux';
+function sortiesFiltres() { const f = jxSearch.toLowerCase().trim(); return SORTIES.filter((s) => (jxLieu === 'tous' || s.lieu === jxLieu) && (!jxFav || data.favSorties.includes(s.id)) && (!f || s.nom.toLowerCase().includes(f) || s.cat.toLowerCase().includes(f))); }
+function sortieRowsHtml() { const list = sortiesFiltres(); if (!list.length) return `<div class="empty"><span class="e">🔍</span>Aucune sortie avec ces filtres.</div>`; return list.map((s) => { const fav = data.favSorties.includes(s.id); return `<div class="item recipe" data-sid="${s.id}"><span class="label">${s.emoji} ${esc(s.nom)}<br><span class="muted" style="font-size:12px">${esc(s.cat)} · ${esc(s.cout)}</span></span><button class="rfav" data-sfav="${s.id}">${fav ? '❤️' : '🤍'}</button><span class="go">›</span></div>`; }).join(''); }
+function toggleFavSortie(id) { const i = data.favSorties.indexOf(id); if (i >= 0) data.favSorties.splice(i, 1); else data.favSorties.push(id); save(); }
+function wireSorties(scope) { scope.querySelectorAll('[data-sid]').forEach((row) => { row.addEventListener('click', () => openSortieDetail(row.dataset.sid)); const fb = row.querySelector('[data-sfav]'); if (fb) fb.addEventListener('click', (e) => { e.stopPropagation(); toggleFavSortie(row.dataset.sfav); scope.querySelector('#jx-list').innerHTML = sortieRowsHtml(); wireSorties(scope); }); }); }
+function openSortieDetail(id) {
+  const s = SORTIES.find((x) => x.id === id); if (!s) return; closeOverlay();
+  const fav = data.favSorties.includes(s.id);
+  const lieuTxt = s.lieu === 'int' ? '🏠 Intérieur' : '🌳 Extérieur';
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>${s.emoji} ${esc(s.nom)}</h2></div>
+    <div class="overlay-body"><div class="badges"><span class="jbadge">${lieuTxt}</span><span class="jbadge">${esc(s.cat)}</span><span class="jbadge">💰 ${esc(s.cout)}</span></div>
+      <div class="card"><p style="margin:0">${esc(s.desc)}</p></div>
+      <div class="btn-row" style="margin-top:6px"><button class="btn" style="flex:1" id="sd-fav">${fav ? '❤️ Favori' : '🤍 Favori'}</button><button class="btn btn-accent" style="flex:1" id="sd-other">🎲 Une autre</button></div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', () => { closeOverlay(); render(); });
+  ov.querySelector('#sd-fav').addEventListener('click', () => { toggleFavSortie(s.id); openSortieDetail(s.id); });
+  ov.querySelector('#sd-other').addEventListener('click', () => { const p = sortiesFiltres(); if (p.length) openSortieDetail(p[Math.floor(Math.random() * p.length)].id); });
 }
 
 /* ============================================================
@@ -1080,15 +1283,32 @@ function gameRowsHtml() {
   return list.map((g) => { const fav = data.favJeux.includes(g.id); return `<div class="item recipe" data-jid="${g.id}"><span class="label">${g.emoji} ${esc(g.nom)}<br><span class="muted" style="font-size:12px">${esc(g.cat)} · ${esc(ageBadge(g))}</span></span><button class="rfav" data-jfav="${g.id}">${fav ? '❤️' : '🤍'}</button><span class="go">›</span></div>`; }).join('');
 }
 function renderJeux(el) {
-  const ages = [['tous', 'Tous âges'], ['petits', '3-5 ans'], ['moyens', '6-8 ans'], ['grands', '9 ans +']];
+  const seg = `<div class="seg"><button data-jmode="jeux" class="${jeuxMode === 'jeux' ? 'on' : ''}">🎲 Jeux</button><button data-jmode="sorties" class="${jeuxMode === 'sorties' ? 'on' : ''}">🌳 Sorties</button></div>`;
   const lieux = [['tous', 'Partout'], ['int', '🏠 Intérieur'], ['ext', '🌳 Extérieur']];
-  el.innerHTML = `
+  if (jeuxMode === 'sorties') {
+    el.innerHTML = seg + `
+      <button class="btn btn-accent btn-block" id="sx-random" style="margin-bottom:14px">🎲 Une idée de sortie au hasard</button>
+      <input class="input" id="jx-search" placeholder="Rechercher une sortie…" autocomplete="off" value="${esc(jxSearch)}" />
+      <div class="chips" style="margin-top:10px">${lieux.map((c) => `<button class="chip ${jxLieu === c[0] ? 'on' : ''}" data-lieu="${c[0]}">${c[1]}</button>`).join('')}<button class="chip ${jxFav ? 'on' : ''}" data-favtoggle>❤️ Favoris</button></div>
+      <p class="muted" style="margin:12px 2px 0">${sortiesFiltres().length} idée(s) de sortie</p>
+      <div class="list" id="jx-list" style="margin-top:6px">${sortieRowsHtml()}</div>`;
+    el.querySelectorAll('[data-jmode]').forEach((b) => b.addEventListener('click', () => { jeuxMode = b.dataset.jmode; renderJeux(el); }));
+    el.querySelector('#sx-random').addEventListener('click', () => { const p = sortiesFiltres(); if (!p.length) { toast('Aucune sortie'); return; } openSortieDetail(p[Math.floor(Math.random() * p.length)].id); });
+    el.querySelector('#jx-search').addEventListener('input', (e) => { jxSearch = e.target.value; el.querySelector('#jx-list').innerHTML = sortieRowsHtml(); wireSorties(el); });
+    el.querySelectorAll('[data-lieu]').forEach((b) => b.addEventListener('click', () => { jxLieu = b.dataset.lieu; renderJeux(el); }));
+    el.querySelector('[data-favtoggle]').addEventListener('click', () => { jxFav = !jxFav; renderJeux(el); });
+    wireSorties(el);
+    return;
+  }
+  const ages = [['tous', 'Tous âges'], ['petits', '3-5 ans'], ['moyens', '6-8 ans'], ['grands', '9 ans +']];
+  el.innerHTML = seg + `
     <button class="btn btn-accent btn-block" id="jx-random" style="margin-bottom:14px">🎲 Propose-moi un jeu au hasard</button>
     <input class="input" id="jx-search" placeholder="Rechercher un jeu…" autocomplete="off" value="${esc(jxSearch)}" />
     <div class="chips" style="margin-top:10px">${ages.map((c) => `<button class="chip ${jxAge === c[0] ? 'on' : ''}" data-age="${c[0]}">${c[1]}</button>`).join('')}</div>
     <div class="chips" style="margin-top:8px">${lieux.map((c) => `<button class="chip ${jxLieu === c[0] ? 'on' : ''}" data-lieu="${c[0]}">${c[1]}</button>`).join('')}<button class="chip ${jxFav ? 'on' : ''}" data-favtoggle>❤️ Favoris</button></div>
     <p class="muted" style="margin:12px 2px 0">${jeuxFiltres().length} jeu(x) — touche pour voir les règles</p>
     <div class="list" id="jx-list" style="margin-top:6px">${gameRowsHtml()}</div>`;
+  el.querySelectorAll('[data-jmode]').forEach((b) => b.addEventListener('click', () => { jeuxMode = b.dataset.jmode; renderJeux(el); }));
   el.querySelector('#jx-random').addEventListener('click', randomGame);
   el.querySelector('#jx-search').addEventListener('input', (e) => { jxSearch = e.target.value; el.querySelector('#jx-list').innerHTML = gameRowsHtml(); wireJeux(el); });
   el.querySelectorAll('[data-age]').forEach((b) => b.addEventListener('click', () => { jxAge = b.dataset.age; renderJeux(el); }));

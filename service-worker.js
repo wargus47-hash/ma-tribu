@@ -1,5 +1,5 @@
 // Service worker — rend "Ma Tribu" installable et utilisable hors-ligne.
-const CACHE = 'matribu-v8';
+const CACHE = 'matribu-v9';
 const ASSETS = [
   './',
   './index.html',
