@@ -1,5 +1,6 @@
-// Service worker — rend "Ma Tribu" installable et utilisable hors-ligne.
-const CACHE = 'matribu-v14';
+// Service worker — Ma Tribu : "réseau d'abord" (toujours la dernière version
+// quand il y a du réseau), cache en secours pour le hors-ligne.
+const CACHE = 'matribu-v15';
 const ASSETS = [
   './',
   './index.html',
@@ -26,8 +27,12 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
-    caches.match(e.request).then(
-      (cached) => cached || fetch(e.request).catch(() => caches.match('./index.html'))
-    )
+    fetch(e.request)
+      .then((resp) => {
+        const copy = resp.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+        return resp;
+      })
+      .catch(() => caches.match(e.request).then((cached) => cached || caches.match('./index.html')))
   );
 });

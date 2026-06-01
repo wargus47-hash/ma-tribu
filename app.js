@@ -1790,6 +1790,8 @@ function boot() {
   setTab('accueil');
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (refreshing) return; refreshing = true; location.reload(); });
   }
 }
 document.addEventListener('DOMContentLoaded', boot);
