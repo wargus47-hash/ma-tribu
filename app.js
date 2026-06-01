@@ -1392,7 +1392,19 @@ const FICHES = [
   { id: 'f7', nom: 'Cuire pâtes et riz', emoji: '🍝', etapes: ["Pâtes : grande casserole d'eau bouillante salée, 8 à 11 min (voir paquet), puis égoutte.", "Riz : 1 volume de riz pour 2 d'eau salée, couvre, feu doux 10-12 min jusqu'à absorption.", "Quantité : environ 80 g de cru par adulte, 50 g par enfant."] },
   { id: 'f8', nom: 'Cuire un œuf', emoji: '🥚', etapes: ["À la coque : 3 min dans l'eau bouillante.", "Mollet : 6 min. Dur : 9 à 10 min.", "Au plat : à la poêle avec un peu d'huile, 2 à 3 min.", "Plonge les œufs durs dans l'eau froide : ils s'écalent plus facilement."] },
   { id: 'f9', nom: 'Repasser sans stress', emoji: '🔥', etapes: ["Repasse le linge légèrement humide, ou avec la vapeur.", "Température : chaud pour le coton, doux pour le synthétique (vérifie l'étiquette).", "Commence par les cols et les manches.", "Astuce : plie le linge dès la sortie de machine, beaucoup n'auront pas besoin de repassage."] },
-  { id: 'f10', nom: 'Gérer les poubelles & le tri', emoji: '♻️', etapes: ["Bac jaune : emballages, plastiques, cartons, métal.", "Verre : dans le conteneur à part.", "Ordures ménagères : tout le reste.", "Sors les poubelles la veille du ramassage (note le jour dans tes rappels)."] }
+  { id: 'f10', nom: 'Gérer les poubelles & le tri', emoji: '♻️', etapes: ["Bac jaune : emballages, plastiques, cartons, métal.", "Verre : dans le conteneur à part.", "Ordures ménagères : tout le reste.", "Sors les poubelles la veille du ramassage (note le jour dans tes rappels)."] },
+  { id: 'f11', nom: 'Plier un drap-housse', emoji: '🛏️', etapes: ["Glisse tes mains dans deux coins voisins (les élastiques), puis retourne-en un sur l'autre.", "Fais pareil avec les deux autres coins : tu obtiens un seul paquet de 4 coins.", "Pose à plat, rentre les bords arrondis pour former un rectangle.", "Plie en trois : c'est net et compact."] },
+  { id: 'f12', nom: 'Changer les draps & faire le lit', emoji: '🛌', etapes: ["Drap-housse : enfile bien les 4 coins du matelas.", "Housse de couette : retourne-la, attrape les 2 coins du fond + ceux de la couette, puis secoue pour qu'elle se déroule.", "Change les draps toutes les 1 à 2 semaines (plus souvent en cas de maladie).", "Astuce : fais participer les enfants, c'est plus rapide à deux."] },
+  { id: 'f13', nom: 'Détartrer cafetière & bouilloire', emoji: '☕', etapes: ["Remplis de moitié eau, moitié vinaigre blanc.", "Fais chauffer (ou lance un cycle) et laisse agir 15 à 30 min.", "Vide, puis rince 2 fois à l'eau claire.", "À faire environ une fois par mois selon le calcaire de ta région."] },
+  { id: 'f14', nom: 'Congeler & décongeler', emoji: '🧊', etapes: ["Congèle en portions, dans des boîtes ou sachets datés.", "Se congèle bien : plats mijotés, soupes, viande, pain, restes.", "Évite : œufs en coquille, crudités, pommes de terre cuites.", "Décongèle au frigo la veille, jamais à l'air libre. Ne recongèle jamais un produit décongelé."] },
+  { id: 'f15', nom: 'Bien ranger le frigo', emoji: '🥶', etapes: ["En haut : restes et produits entamés (zone la moins froide).", "Au milieu : laitages et œufs.", "En bas (le plus froid) : viande et poisson, à manger vite.", "Bac : fruits et légumes. Porte : boissons, condiments, beurre."] },
+  { id: 'f16', nom: 'Faire un ourlet rapide', emoji: '✂️', etapes: ["Replie le bas du pantalon à la hauteur voulue et épingle.", "Couds à petits points discrets, OU utilise du fil thermocollant (ourlet sans couture, au fer à repasser).", "Repasse pour bien marquer le pli."] },
+  { id: 'f17', nom: 'Repasser une chemise', emoji: '👔', etapes: ["Commence par le col, à plat, des deux côtés.", "Puis les poignets et les manches.", "Ensuite le dos, et les devants autour des boutons.", "Suspends-la aussitôt sur un cintre pour garder le résultat."] },
+  { id: 'f18', nom: 'Vitres sans traces', emoji: '🪟', etapes: ["Mélange de l'eau + un peu de vinaigre blanc dans un vaporisateur.", "Essuie avec un chiffon microfibre (ou du papier journal).", "Fais des mouvements en Z, pas en rond.", "Évite le plein soleil : ça sèche trop vite et laisse des traces."] },
+  { id: 'f19', nom: 'Cuisiner les restes (anti-gaspi)', emoji: '♻️', etapes: ["Légumes cuits → soupe, omelette, gratin.", "Pain rassis → pain perdu, croûtons, chapelure.", "Riz ou pâtes → poêlée, gratin, salade.", "Viande → hachis, sandwich, riz cantonais. Vérifie toujours l'odeur et l'aspect avant."] },
+  { id: 'f20', nom: 'Nettoyer la salle de bain', emoji: '🛁', etapes: ["Vaporise un produit sur lavabo, douche et baignoire ; laisse agir 5 min.", "Frotte, rince, essuie.", "WC : produit sous le rebord, brosse, tire la chasse.", "Termine par le sol et le miroir. Une fois par semaine suffit avec un petit entretien quotidien."] },
+  { id: 'f21', nom: 'Goûters & petits-déj malins', emoji: '🍎', etapes: ["Petit-déj équilibré : un produit céréalier (pain, céréales) + un laitage + un fruit + à boire.", "Goûter simple : un fruit + du pain ou des biscuits, ou un yaourt + une compote.", "Ne remplis pas le placard de sucreries : tu n'achètes que ce que tu veux qu'ils mangent.", "Prépare des portions à l'avance (fruits coupés, gourdes)."] },
+  { id: 'f22', nom: 'Le sac de piscine / sport', emoji: '🏊', etapes: ["Piscine : maillot + bonnet + lunettes. Sport : tenue + baskets.", "Dans tous les cas : serviette, gourde, un en-cas.", "Ajoute un sac plastique pour le linge mouillé.", "Astuce : garde un sac « prêt » avec l'essentiel pour ne rien oublier."] }
 ];
 const URGENCES = [
   { emoji: '🌡️', titre: 'Fièvre', conseils: ["Découvre l'enfant, fais-le boire souvent, aère la pièce.", "Tu peux donner du paracétamol selon son poids (lis bien la notice).", "Appelle le médecin si la fièvre dure plus de 48h, si l'enfant a moins de 3 mois, ou s'il est très abattu."] },
@@ -1432,7 +1444,23 @@ const CONSEILS = [
   "Le batch cooking du dimanche te sauve toute la semaine.",
   "Range 5 min avec eux comme un jeu : à qui ramasse le plus vite !",
   "Une routine affichée évite de répéter dix fois la même chose.",
-  "En cas de crise, respire. Ton calme calme l'enfant."
+  "En cas de crise, respire. Ton calme calme l'enfant.",
+  "Le rangement attendra : 10 min de jeu avec eux valent de l'or.",
+  "Cuisine en double et congèle : un dîner d'avance, c'est un soir de répit.",
+  "Affiche le menu de la semaine : fini le « on mange quoi ce soir ? ».",
+  "Même heure de coucher = enfant reposé = moins de crises le lendemain.",
+  "Limite tes propres écrans devant eux : ils copient tout ce que tu fais.",
+  "Un « non » dit calmement vaut mieux que dix « non » criés.",
+  "Le matin, commence par un petit plaisir : un bon petit-déj, une blague.",
+  "Tu as le droit de t'ennuyer avec eux : ils n'ont pas besoin d'animation non-stop.",
+  "Range AVEC eux : ça leur apprend, et tu n'es plus seul à porter la maison.",
+  "Note tout dans l'appli plutôt que dans ta tête : ta tête mérite du repos.",
+  "Le dimanche soir, prépare la semaine en 10 min : tu te remercieras.",
+  "À table, sans téléphone : c'est souvent le meilleur moment de la journée.",
+  "Garde une activité rien que pour toi : un parent épanoui est un meilleur parent.",
+  "Les bêtises font partie de l'enfance. Respire avant de gronder.",
+  "Dis-leur que tu les aimes, surtout les jours difficiles.",
+  "Une journée ratée n'efface pas tout ce que tu réussis. Demain est un autre jour."
 ];
 const SAISONS = {
   'Rentrée scolaire': ['Cartable', 'Trousse', 'Cahiers', 'Stylos & crayons', 'Règle, gomme, taille-crayon', 'Agenda', 'Tenue de sport', 'Chaussons', 'Étiquettes au nom', 'Certificat médical / assurance'],
