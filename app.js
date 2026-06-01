@@ -157,8 +157,8 @@ function seedRecettes() {
 }
 function seed() {
   return {
-    version: 11,
-    reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false, theme: 'clair', accent: 'teal', midiSemaine: false, notifs: false, lastNotif: '', consignesSitter: '' },
+    version: 12,
+    reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false, theme: 'clair', accent: 'teal', midiSemaine: false, notifs: false, lastNotif: '', consignesSitter: '', ville: '' },
     courses: [],
     recurrents: [
       { nom: 'Pommes', rayon: 'Fruits & Légumes' }, { nom: 'Bananes', rayon: 'Fruits & Légumes' }, { nom: 'Clémentines', rayon: 'Fruits & Légumes' },
@@ -254,6 +254,7 @@ function migrate() {
   data.devoirs = data.devoirs || [];
   if (!data.recompenses) data.recompenses = seedRecompenses(); else { data.recompenses.petit = data.recompenses.petit || seedRecompenses().petit; data.recompenses.grand = data.recompenses.grand || seedRecompenses().grand; }
   if (data.reglages.consignesSitter === undefined) data.reglages.consignesSitter = '';
+  if (data.reglages.ville === undefined) data.reglages.ville = '';
   data.pharmacie = data.pharmacie || seedPharmacie();
   data.menage = data.menage || seedMenage();
   if (!data.finances) data.finances = { revenu: 0, charges: [], depenses: [] }; else { data.finances.charges = data.finances.charges || []; data.finances.depenses = data.finances.depenses || []; if (data.finances.revenu === undefined) data.finances.revenu = 0; }
@@ -266,7 +267,7 @@ function migrate() {
   if (!data.routines) data.routines = s.routines;
   else if (data.routines.matin || data.routines.soir) { const old = data.routines; data.routines = seedRoutines(); data.routines.petit = { matin: old.matin || [], soir: old.soir || [] }; }
   else { data.routines.petit = data.routines.petit || seedRoutines().petit; data.routines.grand = data.routines.grand || seedRoutines().grand; }
-  data.version = 11;
+  data.version = 12;
 }
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) { toast('⚠️ Sauvegarde impossible (mémoire pleine ?)'); } }
 
@@ -404,13 +405,15 @@ function renderAccueil(el) {
   const dc = el.querySelector('#d-cart');
   if (dc) dc.addEventListener('click', () => addRecetteToCourses(ti, 'soir'));
   const av = accueilTodayHtml(); if (av) el.insertAdjacentHTML('beforeend', av);
-  el.insertAdjacentHTML('beforeend', `<div class="section-title">Outils</div><div class="quick"><button id="ac-guide"><span class="e">📖</span>Guide du parent</button><button id="ac-dep"><span class="e">💶</span>Dépenses partagées</button><button id="ac-sitter"><span class="e">🧑‍🍼</span>Mode baby-sitter</button><button id="ac-idee"><span class="e">💡</span>Idée anti-écran</button><button id="ac-budget"><span class="e">💰</span>Budget du mois</button><button id="ac-journal"><span class="e">📔</span>Livre de bord</button></div><div class="card" style="margin-top:14px"><b>💛 Conseil du jour</b><br><span class="muted">${esc(conseilDuJour())}</span></div><div class="card"><b>🎯 Le défi de la semaine</b><br><span class="muted">${esc(defiSemaine())}</span></div>`);
+  el.insertAdjacentHTML('beforeend', `<div class="section-title">Outils</div><div class="quick"><button id="ac-guide"><span class="e">📖</span>Guide du parent</button><button id="ac-dep"><span class="e">💶</span>Dépenses partagées</button><button id="ac-sitter"><span class="e">🧑‍🍼</span>Mode baby-sitter</button><button id="ac-idee"><span class="e">💡</span>Idée anti-écran</button><button id="ac-budget"><span class="e">💰</span>Budget du mois</button><button id="ac-journal"><span class="e">📔</span>Livre de bord</button><button id="ac-frigo"><span class="e">📺</span>Écran du jour</button></div><div class="card" style="margin-top:14px"><b>💛 Conseil du jour</b><br><span class="muted">${esc(conseilDuJour())}</span></div><div class="card"><b>🎯 Le défi de la semaine</b><br><span class="muted">${esc(defiSemaine())}</span></div>`);
   el.querySelector('#ac-guide').addEventListener('click', openGuide);
   el.querySelector('#ac-dep').addEventListener('click', openDepenses);
   el.querySelector('#ac-sitter').addEventListener('click', openSitter);
   el.querySelector('#ac-idee').addEventListener('click', () => openGameDetail(JEUX[Math.floor(Math.random() * JEUX.length)].id));
   el.querySelector('#ac-budget').addEventListener('click', openBudget);
   el.querySelector('#ac-journal').addEventListener('click', openJournal);
+  el.querySelector('#ac-frigo').addEventListener('click', openFrigo);
+  injectWeather(el);
 }
 function rappelLabel(s) {
   const diff = Math.round((parseISO(s) - parseISO(todayISO())) / 86400000);
@@ -753,9 +756,10 @@ function renderGarde(el) {
   document.getElementById('tr-add').addEventListener('click', addTr);
   document.getElementById('tr-nom').addEventListener('keydown', (e) => { if (e.key === 'Enter') addTr(); });
   document.getElementById('tr-reset').addEventListener('click', () => { data.transition.forEach((x) => x.fait = false); save(); renderGarde(el); toast('Sac réinitialisé — prêt pour le prochain échange'); });
-  el.insertAdjacentHTML('beforeend', activitesCardHtml() + vacancesCardHtml() + `<button class="btn btn-block" id="g-liaison" style="margin-top:4px">📓 Cahier de liaison co-parent</button>`);
+  el.insertAdjacentHTML('beforeend', activitesCardHtml() + vacancesCardHtml() + `<button class="btn btn-block" id="g-agenda" style="margin-top:4px">📅 Agenda du mois</button><button class="btn btn-block" id="g-liaison" style="margin-top:8px">📓 Cahier de liaison co-parent</button>`);
   wireActivites(el);
   wireVacances(el);
+  el.querySelector('#g-agenda').addEventListener('click', openAgenda);
   el.querySelector('#g-liaison').addEventListener('click', openLiaison);
 }
 
@@ -841,9 +845,10 @@ function renderFamille(el) {
   });
   const ntClear = document.getElementById('nt-clear');
   if (ntClear) ntClear.addEventListener('click', () => { data.notes = data.notes.filter((n) => !n.fait); save(); renderFamille(el); });
-  el.insertAdjacentHTML('beforeend', santeButtonHtml(child) + recompensesCardHtml(child) + devoirsCardHtml() + anniversairesCardHtml() + `<button class="btn btn-block" id="f-cadeaux" style="margin-top:4px">🎁 Idées cadeaux</button>`);
+  el.insertAdjacentHTML('beforeend', santeButtonHtml(child) + recompensesCardHtml(child) + devoirsCardHtml() + anniversairesCardHtml() + `<button class="btn btn-block" id="f-cadeaux" style="margin-top:4px">🎁 Idées cadeaux</button><button class="btn btn-block" id="f-minuteur" style="margin-top:8px">⏲️ Minuteur</button>`);
   el.querySelector('#f-sante').addEventListener('click', () => openSante(child));
   el.querySelector('#f-cadeaux').addEventListener('click', openCadeaux);
+  el.querySelector('#f-minuteur').addEventListener('click', openMinuteur);
   wireRecompenses(el, child);
   wireDevoirs(el);
   wireAnniversaires(el);
@@ -902,6 +907,7 @@ function openReglages() {
           <button class="btn btn-block" id="ct-add">Ajouter le contact</button>
         </div>
       </div>
+      <div class="set-section"><h3>🌦️ Ma ville (météo)</h3><div class="card"><div class="field-row"><input class="input" id="set-ville" value="${esc(data.reglages.ville || '')}" placeholder="Ex. Lyon" /><button class="btn btn-primary" id="set-ville-save">OK</button></div></div></div>
       <div class="set-section"><h3>🔐 Infos importantes</h3><div class="card"><button class="btn btn-block" id="set-coffre">Ouvrir le coffre à infos (sécu, assurances, codes…)</button></div></div>
       <div class="set-section"><h3>🧑‍🍼 Consignes baby-sitter</h3>
         <div class="card"><textarea class="input" id="set-consignes" rows="3" placeholder="Ce que la nounou doit savoir (horaires, repas, écrans, urgences…)">${esc(data.reglages.consignesSitter || '')}</textarea><button class="btn btn-block" id="set-consignes-save" style="margin-top:8px">Enregistrer</button></div>
@@ -941,6 +947,7 @@ function openReglages() {
   ov.querySelector('#op-notif').addEventListener('click', () => { if (data.reglages.notifs) { data.reglages.notifs = false; save(); openReglages(); } else requestNotifs(); });
   ov.querySelector('#set-consignes-save').addEventListener('click', () => { data.reglages.consignesSitter = ov.querySelector('#set-consignes').value.trim(); save(); toast('Consignes enregistrées'); });
   ov.querySelector('#set-coffre').addEventListener('click', openCoffre);
+  ov.querySelector('#set-ville-save').addEventListener('click', () => { data.reglages.ville = ov.querySelector('#set-ville').value.trim(); weatherCache = null; save(); toast('Ville enregistrée'); });
 }
 function exportData() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1589,8 +1596,8 @@ function openSoin() {
 }
 function openGuide() {
   closeOverlay();
-  const items = [['🧠 Que faire quand…', 'openSituations'], ['💬 Phrases qui aident', 'openPhrases'], ['💛 Rituels & conseils', 'openRituels'], ['🧭 Repères par âge', 'openReperes'], ['🧰 Fiches pratiques maison', 'openFiches'], ['🧹 Planning ménage', 'openMenage'], ['🩹 En cas de pépin', 'openUrgences'], ['💊 Trousse à pharmacie', 'openTrousse'], ['📋 Checklists de saison', 'openSaison'], ['🎂 Organiser un anniversaire', 'openAnnivGuide'], ['📑 Démarches (parent séparé)', 'openDemarches'], ['🆘 Ressources & soutien', 'openRessources'], ['🧘 Prendre soin de toi', 'openSoin']];
-  const map = { openFiches, openMenage, openUrgences, openTrousse, openReperes, openRituels, openSaison, openSituations, openPhrases, openDemarches, openRessources, openSoin, openAnnivGuide };
+  const items = [['🧠 Que faire quand…', 'openSituations'], ['💬 Phrases qui aident', 'openPhrases'], ['💛 Rituels & conseils', 'openRituels'], ['🧭 Repères par âge', 'openReperes'], ['🧰 Fiches pratiques maison', 'openFiches'], ['🧹 Planning ménage', 'openMenage'], ['🩹 En cas de pépin', 'openUrgences'], ['💊 Trousse à pharmacie', 'openTrousse'], ['📋 Checklists de saison', 'openSaison'], ['🎂 Organiser un anniversaire', 'openAnnivGuide'], ['📑 Démarches (parent séparé)', 'openDemarches'], ['🆘 Ressources & soutien', 'openRessources'], ['🧘 Prendre soin de toi', 'openSoin'], ['💬 Questions pour papoter', 'openPapoter'], ['🥕 Fruits & légumes de saison', 'openSaisonProduits'], ['📖 Histoires du soir', 'openHistoires']];
+  const map = { openFiches, openMenage, openUrgences, openTrousse, openReperes, openRituels, openSaison, openSituations, openPhrases, openDemarches, openRessources, openSoin, openAnnivGuide, openPapoter, openSaisonProduits, openHistoires };
   const ov = document.createElement('div'); ov.className = 'overlay';
   ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>📖 Le guide du parent</h2></div>
     <div class="overlay-body"><p class="muted" style="margin:0 2px 12px">Tout ce que personne ne t'a expliqué, réuni ici. Tu gères déjà très bien 💪</p>
@@ -1702,11 +1709,13 @@ function openBudget() {
       <div class="section-title">Dépenses du mois · ${eur(totDep)} €</div>
       <div class="card"><div class="field-row"><input class="input" id="de-mt" type="number" inputmode="decimal" placeholder="Montant €" /><select class="select" id="de-cat">${cats.map((c) => `<option>${c}</option>`).join('')}</select></div><div class="field-row"><input class="input" id="de-note" placeholder="Note (facultatif)" /><button class="btn btn-primary" id="de-add">＋</button></div>
         <div class="list" style="margin-top:8px">${[...depMois].reverse().slice(0, 8).map((d) => `<div class="item" data-deid="${d.id}"><span class="label">${esc(d.note || d.cat)} <span class="muted">· ${esc(d.cat)} · ${esc(frShort(d.date))}</span></span><span class="tag">${eur(d.montant)} €</span><button class="x" data-dedel>✕</button></div>`).join('')}</div></div>
+      <button class="btn btn-block" id="bu-bilan" style="margin-bottom:8px">📊 Voir le bilan du mois</button>
       <p class="muted" style="text-align:center;font-size:12px">100 % privé, stocké sur ton appareil.</p>
     </div>`;
   document.body.appendChild(ov);
   ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
   ov.querySelector('#bu-rev-save').addEventListener('click', () => { f.revenu = parseFloat(ov.querySelector('#bu-rev').value) || 0; save(); openBudget(); });
+  ov.querySelector('#bu-bilan').addEventListener('click', openBilan);
   ov.querySelector('#ch-add').addEventListener('click', () => { const n = ov.querySelector('#ch-nom').value.trim(); const m = parseFloat(ov.querySelector('#ch-mt').value); if (!n || isNaN(m)) { toast('Nom + montant'); return; } f.charges.push({ id: uid(), nom: n, montant: m }); save(); openBudget(); });
   ov.querySelectorAll('[data-chid]').forEach((row) => row.querySelector('[data-chdel]').addEventListener('click', () => { f.charges = f.charges.filter((x) => x.id !== row.dataset.chid); save(); openBudget(); }));
   ov.querySelector('#de-add').addEventListener('click', () => { const m = parseFloat(ov.querySelector('#de-mt').value); if (isNaN(m)) { toast('Indique un montant'); return; } f.depenses.push({ id: uid(), date: todayISO(), montant: m, cat: ov.querySelector('#de-cat').value, note: ov.querySelector('#de-note').value.trim() }); save(); openBudget(); });
@@ -1768,6 +1777,193 @@ function openAnnivGuide() {
     <p class="muted" style="text-align:center;font-size:12px">Le plus important : que ton enfant se sente fêté et aimé. Le reste est bonus 💛</p></div>`;
   document.body.appendChild(ov);
   ov.querySelector('[data-back]').addEventListener('click', openGuide);
+}
+
+/* ============================================================
+   v12 : agenda, bilan, minuteur, météo, papoter, saison,
+        histoires du soir, écran frigo
+   ============================================================ */
+let minTimer = null;
+let weatherCache = null;
+
+function openAgenda() {
+  closeOverlay();
+  let ref = new Date(today().getFullYear(), today().getMonth(), 1);
+  let sel = todayISO();
+  const ov = document.createElement('div'); ov.className = 'overlay'; document.body.appendChild(ov);
+  function eventsOn(key) {
+    const dow = (parseISO(key).getDay() + 6) % 7; const items = [];
+    if (data.menu[key] && data.menu[key].meal) items.push('🍽️ ' + data.menu[key].meal);
+    data.activites.filter((a) => a.jour === dow).sort((a, b) => (a.heure || '').localeCompare(b.heure || '')).forEach((a) => items.push('📆 ' + (a.heure ? a.heure + ' ' : '') + a.nom));
+    data.rappels.filter((r) => r.date === key && !r.fait).forEach((r) => items.push('🔔 ' + r.texte));
+    data.anniversaires.forEach((a) => { const p = (a.date || '').split('-'); if (p.length === 3 && key.slice(5) === p[1] + '-' + p[2]) items.push('🎂 ' + a.nom); });
+    data.vacances.forEach((v) => { if (v.debut && key >= v.debut && key <= (v.fin || v.debut)) items.push('🏖️ ' + v.nom); });
+    return items;
+  }
+  function draw() {
+    const y = ref.getFullYear(), m = ref.getMonth();
+    const off = (new Date(y, m, 1).getDay() + 6) % 7; const nb = new Date(y, m + 1, 0).getDate(); const ti = todayISO();
+    let cells = '';
+    for (let i = 0; i < off; i++) cells += '<div class="cal-cell empty"></div>';
+    for (let d = 1; d <= nb; d++) { const key = iso(new Date(y, m, d)); const ev = eventsOn(key); const dots = ev.length ? '<div class="agd-dots">' + '•'.repeat(Math.min(ev.length, 4)) + '</div>' : ''; cells += `<div class="cal-cell ${data.presence[key] ? 'on' : ''} ${key === ti ? 'today' : ''} ${key === sel ? 'pending' : ''}" data-day="${key}">${d}${dots}</div>`; }
+    const list = eventsOn(sel);
+    ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>📅 Agenda du mois</h2></div><div class="overlay-body">
+      <div class="cal-head"><button data-prev>‹</button><div class="m">${MOIS[m]} ${y}</div><button data-next>›</button></div>
+      <div class="cal-grid">${DOW.map((x) => `<div class="cal-dow">${x}</div>`).join('')}</div>
+      <div class="cal-grid" style="margin-top:5px">${cells}</div>
+      <div class="legend"><span><span class="dot" style="background:var(--primary)"></span>Avec les enfants</span><span>• activités, rappels, anniv, vacances</span></div>
+      <div class="section-title">${esc(cap(frLong(parseISO(sel))))}</div>
+      <div class="card">${list.length ? `<div class="list">${list.map((x) => `<div class="item"><span class="label">${esc(x)}</span></div>`).join('')}</div>` : '<div class="empty"><span class="e">📭</span>Rien de prévu ce jour-là.</div>'}</div>
+    </div>`;
+    ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
+    ov.querySelector('[data-prev]').addEventListener('click', () => { ref = new Date(y, m - 1, 1); draw(); });
+    ov.querySelector('[data-next]').addEventListener('click', () => { ref = new Date(y, m + 1, 1); draw(); });
+    ov.querySelectorAll('[data-day]').forEach((c) => c.addEventListener('click', () => { sel = c.dataset.day; draw(); }));
+  }
+  draw();
+}
+
+function openBilan() {
+  closeOverlay(); const mk = todayISO().slice(0, 7); const f = data.finances;
+  const totCharges = f.charges.reduce((s, c) => s + (+c.montant || 0), 0);
+  const depMois = f.depenses.filter((d) => (d.date || '').slice(0, 7) === mk);
+  const totDep = depMois.reduce((s, d) => s + (+d.montant || 0), 0);
+  const reste = (+f.revenu || 0) - totCharges - totDep;
+  const parCat = {}; depMois.forEach((d) => { parCat[d.cat] = (parCat[d.cat] || 0) + (+d.montant || 0); });
+  const joursGarde = Object.keys(data.presence).filter((k) => k.slice(0, 7) === mk && data.presence[k]).length;
+  const courses = data.budget.filter((b) => (b.date || '').slice(0, 7) === mk).reduce((s, b) => s + (+b.montant || 0), 0);
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>📊 Bilan de ${MOIS[new Date().getMonth()]}</h2></div><div class="overlay-body">
+    <div class="card" style="text-align:center"><div class="muted">Reste à vivre</div><div class="budg-total" style="color:${reste >= 0 ? 'var(--ok)' : 'var(--danger)'}">${eur(reste)} €</div><div class="muted" style="font-size:12px">Revenu ${eur(f.revenu)} − charges ${eur(totCharges)} − dépenses ${eur(totDep)}</div></div>
+    <div class="dash-grid"><div class="stat"><div class="n">${joursGarde}</div><div class="t">jours avec les enfants</div></div><div class="stat"><div class="n">${eur(courses)} €</div><div class="t">de courses ce mois</div></div></div>
+    <div class="section-title">Dépenses par catégorie</div>
+    <div class="card">${Object.keys(parCat).length ? Object.entries(parCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<div class="item"><span class="label">${esc(c)}</span><span class="tag">${eur(v)} €</span></div>`).join('') : '<div class="empty"><span class="e">📊</span>Aucune dépense enregistrée ce mois-ci.</div>'}</div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
+}
+
+function openMinuteur() {
+  closeOverlay(); clearInterval(minTimer);
+  let remaining = 120, running = false;
+  const fmt = (s) => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  const ov = document.createElement('div'); ov.className = 'overlay'; document.body.appendChild(ov);
+  function tick() { if (remaining > 0) { remaining--; const d = ov.querySelector('#mt-disp'); if (d) d.textContent = fmt(remaining); if (remaining === 0) { clearInterval(minTimer); running = false; if (navigator.vibrate) navigator.vibrate([300, 150, 300]); toast('⏰ Temps écoulé !'); paint(); } } }
+  function paint() {
+    ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>⏲️ Minuteur</h2></div><div class="overlay-body">
+      <div style="text-align:center;margin:14px 0"><div id="mt-disp" style="font-size:70px;font-weight:800;color:var(--primary);line-height:1">${fmt(remaining)}</div></div>
+      <div class="chips" style="justify-content:center">${[1, 2, 3, 5, 10].map((m) => `<button class="chip" data-min="${m}">${m} min</button>`).join('')}</div>
+      <div class="btn-row" style="justify-content:center;margin-top:16px"><button class="btn btn-primary" id="mt-start">${running ? '⏸ Pause' : '▶ Démarrer'}</button><button class="btn" id="mt-reset">↻ Réinitialiser</button></div>
+      <p class="muted" style="text-align:center;margin-top:14px">Idéal pour « 2 min de brossage de dents » ou « 5 min pour ranger ». Ça vibre à la fin.</p></div>`;
+    ov.querySelector('[data-close]').addEventListener('click', () => { clearInterval(minTimer); closeOverlay(); render(); });
+    ov.querySelectorAll('[data-min]').forEach((b) => b.addEventListener('click', () => { remaining = +b.dataset.min * 60; running = false; clearInterval(minTimer); paint(); }));
+    ov.querySelector('#mt-start').addEventListener('click', () => { if (running) { running = false; clearInterval(minTimer); } else { if (remaining <= 0) remaining = 120; running = true; clearInterval(minTimer); minTimer = setInterval(tick, 1000); } paint(); });
+    ov.querySelector('#mt-reset').addEventListener('click', () => { running = false; clearInterval(minTimer); remaining = 120; paint(); });
+  }
+  paint();
+}
+
+function openFrigo() {
+  closeOverlay(); const ti = todayISO(); const present = !!data.presence[ti]; const m = data.menu[ti] || {};
+  const acts = data.activites.filter((a) => a.jour === todayDow()).sort((a, b) => (a.heure || '').localeCompare(b.heure || ''));
+  const ex = nextExchange();
+  const raps = data.rappels.filter((r) => !r.fait && r.date && r.date >= ti).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>📺 Aujourd'hui</h2></div><div class="overlay-body">
+    <div class="frigo-date">${esc(cap(frLong(today())))}</div>
+    <div class="frigo-big">${present ? '👧🧒 Les enfants sont à la maison' : '🙂 Journée sans les enfants'}</div>
+    ${m.meal ? `<div class="frigo-line">🍽️ Ce soir : <b>${esc(m.meal)}</b></div>` : ''}
+    ${acts.length ? `<div class="frigo-line">📆 ${acts.map((a) => (a.heure ? '<b>' + esc(a.heure) + '</b> ' : '') + esc(a.nom)).join(' &nbsp;·&nbsp; ')}</div>` : ''}
+    ${ex ? `<div class="frigo-line">🔄 Prochain échange : <b>${esc(frShort(ex.date))}</b> (${ex.present ? 'ils arrivent' : 'ils repartent'})</div>` : ''}
+    ${raps.length ? raps.map((r) => `<div class="frigo-line">🔔 ${esc(r.texte)} <span class="muted">· ${esc(rappelLabel(r.date))}</span></div>`).join('') : ''}
+  </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
+}
+
+const PAPOTE = ["Si tu avais un super-pouvoir, lequel choisirais-tu ?", "C'est quoi ton meilleur souvenir ?", "Si tu étais un animal, tu serais lequel et pourquoi ?", "Qu'est-ce qui t'a fait rire aujourd'hui ?", "Si tu pouvais manger un seul plat toute ta vie, ce serait quoi ?", "Quel est ton rêve le plus fou ?", "Si on partait en voyage demain, on irait où ?", "C'est quoi, pour toi, une journée parfaite ?", "Quelle est la chose la plus gentille qu'on t'ait faite ?", "Si tu étais invisible une journée, tu ferais quoi ?", "Quel métier aimerais-tu faire plus tard ?", "Si tu pouvais parler aux animaux, à qui parlerais-tu ?", "C'est quoi ta plus grande fierté ?", "Si tu inventais un jeu, ce serait quoi ?", "Qu'est-ce que tu préfères chez ton frère ou ta sœur ?", "Si tu avais une baguette magique, tu changerais quoi ?", "Quel est ton moment préféré de la journée ?", "Si tu étais le chef de la maison, quelle règle inventerais-tu ?", "C'est quoi le truc le plus rigolo que tu connaisses ?", "Si tu pouvais voler, où irais-tu en premier ?", "Qu'est-ce qui te rend vraiment heureux ?", "Si tu avais un robot, il ferait quoi pour toi ?", "Quelle est ta chanson préférée en ce moment ?", "Si tu pouvais rencontrer n'importe qui, ce serait qui ?"];
+function openPapoter() {
+  closeOverlay(); let q = PAPOTE[Math.floor(Math.random() * PAPOTE.length)];
+  const ov = document.createElement('div'); ov.className = 'overlay'; document.body.appendChild(ov);
+  function draw() {
+    ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>💬 Questions pour papoter</h2></div><div class="overlay-body">
+      <div class="jbut" style="font-size:19px;text-align:center;padding:26px 18px">${esc(q)}</div>
+      <button class="btn btn-accent btn-block" id="pp-next">🎲 Une autre question</button>
+      <p class="muted" style="text-align:center;margin-top:14px">Parfait en voiture ou au dîner pour faire parler les enfants 💛</p></div>`;
+    ov.querySelector('[data-back]').addEventListener('click', openGuide);
+    ov.querySelector('#pp-next').addEventListener('click', () => { q = PAPOTE[Math.floor(Math.random() * PAPOTE.length)]; draw(); });
+  }
+  draw();
+}
+
+const SAISON_PRODUITS = [
+  { f: 'Pomme, poire, orange, clémentine, kiwi', l: 'Poireau, carotte, chou, endive, potiron, pomme de terre' },
+  { f: 'Pomme, poire, orange, kiwi', l: 'Poireau, chou, endive, carotte, betterave' },
+  { f: 'Pomme, poire, kiwi', l: 'Poireau, épinard, endive, carotte, radis' },
+  { f: 'Pomme, premières fraises', l: 'Asperge, radis, épinard, petits pois, carotte' },
+  { f: 'Fraise, cerise, rhubarbe', l: 'Asperge, radis, petits pois, courgette, épinard' },
+  { f: 'Fraise, cerise, abricot, melon', l: 'Courgette, concombre, tomate, petits pois, haricot vert' },
+  { f: 'Abricot, pêche, melon, framboise, cerise', l: 'Tomate, courgette, concombre, aubergine, poivron' },
+  { f: 'Pêche, prune, melon, raisin, figue', l: 'Tomate, courgette, aubergine, poivron, maïs, haricot vert' },
+  { f: 'Raisin, prune, figue, pomme, poire', l: 'Tomate, courgette, poireau, brocoli, épinard' },
+  { f: 'Pomme, poire, raisin, coing', l: 'Potiron, poireau, chou, champignon, carotte' },
+  { f: 'Pomme, poire, clémentine, kiwi', l: 'Potiron, poireau, chou, endive, carotte' },
+  { f: 'Pomme, poire, orange, clémentine, kiwi', l: 'Poireau, chou, endive, potiron, pomme de terre' }
+];
+function openSaisonProduits() {
+  closeOverlay(); const m = new Date().getMonth(); const cur = SAISON_PRODUITS[m];
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>🥕 De saison en ${MOIS[m]}</h2></div><div class="overlay-body">
+    <div class="card"><p style="margin:0 0 10px"><b>🍎 Fruits</b><br>${esc(cur.f)}</p><p style="margin:0"><b>🥦 Légumes</b><br>${esc(cur.l)}</p></div>
+    <p class="jbut">Acheter de saison = moins cher, meilleur goût, et bon pour la planète. 🌍</p>
+    <div class="section-title">Tous les mois</div>
+    <div class="card"><div class="list">${SAISON_PRODUITS.map((s, i) => `<div class="item ${i === m ? 'done' : ''}"><span class="label"><b>${cap(MOIS[i])}</b><br><span class="muted" style="font-size:12px">🍎 ${esc(s.f)} · 🥦 ${esc(s.l)}</span></span></div>`).join('')}</div></div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', openGuide);
+}
+
+const HISTOIRES = [
+  { emoji: '🦊', titre: 'Le petit renard qui ne voulait pas dormir', texte: "Au fond de la forêt, le petit renard Roux refusait de fermer les yeux. « Encore une minute ! » disait-il chaque soir. Sa maman lui montra la lune : « Tu vois, même elle se repose derrière les nuages. » Roux regarda les étoiles s'allumer une à une, comme de petites veilleuses. Il bâilla une fois, deux fois… « Si je dors, je vais rater la nuit », pensa-t-il. Mais la nuit, justement, c'est le moment où l'on rêve des plus belles aventures. Roux ferma enfin les yeux, et dans son rêve, il courait sur un grand tapis d'étoiles. Au matin, il était le renard le plus en forme de toute la forêt. Bonne nuit, petit renard." },
+  { emoji: '🌙', titre: 'La lune et le doudou perdu', texte: "Lou avait perdu son doudou lapin. Impossible de dormir sans lui ! Par la fenêtre, la lune lui fit un clin d'œil. « Ne t'inquiète pas, dit-elle tout doucement, je vais éclairer ta chambre pour t'aider à le retrouver. » Sa lumière argentée glissa sous le lit, derrière les coussins, jusqu'à une petite oreille toute douce qui dépassait du panier de linge. « Le voilà ! » murmura Lou en serrant son lapin très fort. « Merci, madame la Lune. » La lune sourit : « Maintenant, dormez bien tous les deux. Je veille sur vous. » Et Lou s'endormit, son doudou contre la joue, bercé par la douce lumière de la lune." },
+  { emoji: '🐢', titre: 'La tortue qui rêvait de voler', texte: "Camille la tortue regardait les oiseaux avec envie. « Un jour, je volerai moi aussi », disait-elle. Les autres riaient : « Une tortue, ça ne vole pas ! » Mais Camille ne se décourageait pas. Un soir, elle grimpa tout en haut d'une colline, ferma les yeux… et sentit le vent caresser sa carapace. Elle n'avait pas d'ailes, mais là-haut, avec le vent et le ciel immense, elle se sentait plus légère qu'une plume. « Voler, se dit-elle, c'est peut-être juste se sentir libre. » Et chaque soir, du haut de sa colline, Camille souriait aux étoiles. Parfois, les plus beaux rêves ne se réalisent pas comme on l'imaginait — ils sont encore plus doux." }
+];
+function openHistoires() {
+  closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>📖 Histoires du soir</h2></div><div class="overlay-body"><div class="card"><div class="list">${HISTOIRES.map((h, i) => `<div class="item recipe" data-hist="${i}"><span class="label">${h.emoji} ${esc(h.titre)}</span><span class="go">›</span></div>`).join('')}</div></div><p class="muted" style="text-align:center;font-size:12px">À lire tout doucement, blottis ensemble. 💛</p></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', openGuide);
+  ov.querySelectorAll('[data-hist]').forEach((r) => r.addEventListener('click', () => histoireDetail(+r.dataset.hist)));
+}
+function histoireDetail(i) {
+  const h = HISTOIRES[i]; if (!h) return; closeOverlay();
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>${h.emoji} ${esc(h.titre)}</h2></div><div class="overlay-body"><div class="card"><p style="margin:0;font-size:16px;line-height:1.7">${esc(h.texte)}</p></div></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', openHistoires);
+}
+
+function weatherDesc(code) {
+  if (code === 0) return ['☀️', 'Ensoleillé', 'ext'];
+  if (code <= 3) return ['⛅', 'Nuageux', 'ext'];
+  if (code <= 48) return ['🌫️', 'Brouillard', 'int'];
+  if (code <= 67) return ['🌧️', 'Pluvieux', 'int'];
+  if (code <= 77) return ['❄️', 'Neige', 'int'];
+  if (code <= 82) return ['🌦️', 'Averses', 'int'];
+  return ['⛈️', 'Orageux', 'int'];
+}
+function injectWeather(el) {
+  const ville = (data.reglages.ville || '').trim(); if (!ville) return;
+  const hero = el.querySelector('.dash-hero'); if (!hero) return;
+  hero.insertAdjacentHTML('afterend', `<div class="card" id="weather-card"><span class="muted">🌦️ Météo…</span></div>`);
+  const set = (html) => { const c = el.querySelector('#weather-card'); if (c) c.innerHTML = html; };
+  const show = (d) => { const [emo, desc, lieu] = weatherDesc(d.code); const sugg = lieu === 'ext' ? "Beau temps : tente une sortie ou un jeu dehors !" : "Plutôt dedans aujourd'hui : un jeu ou une activité maison."; set(`<div style="display:flex;align-items:center;gap:12px"><span style="font-size:32px">${emo}</span><span><b>${esc(d.name)} · ${d.temp}°C</b><br><span class="muted" style="font-size:13px">${desc} — ${sugg}</span></span></div>`); };
+  if (weatherCache && weatherCache.ville === ville && (Date.now() - weatherCache.ts < 3600000)) { show(weatherCache.data); return; }
+  fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(ville) + '&count=1&language=fr&format=json')
+    .then((r) => r.json())
+    .then((g) => { if (!g.results || !g.results[0]) { set('<span class="muted">🌦️ Ville « ' + esc(ville) + ' » introuvable (Réglages).</span>'); return Promise.reject(); } const o = g.results[0]; return fetch('https://api.open-meteo.com/v1/forecast?latitude=' + o.latitude + '&longitude=' + o.longitude + '&current=temperature_2m,weather_code').then((r) => r.json()).then((w) => ({ name: o.name, temp: Math.round(w.current.temperature_2m), code: w.current.weather_code })); })
+    .then((d) => { weatherCache = { ville, ts: Date.now(), data: d }; show(d); })
+    .catch(() => { const c = el.querySelector('#weather-card'); if (c && /Météo…/.test(c.textContent)) set('<span class="muted">🌦️ Météo indisponible (hors-ligne).</span>'); });
 }
 
 /* ---------- Démarrage ---------- */

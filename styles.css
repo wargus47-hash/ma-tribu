@@ -262,3 +262,10 @@ body.theme-sombre .slotpill{background:#3a3320; color:#f0d99a}
 .badges{display:flex; flex-wrap:wrap; gap:6px; margin:2px 0 12px}
 .jbadge{font-size:12px; font-weight:600; background:var(--primary-soft); color:var(--primary-d); padding:5px 10px; border-radius:999px}
 .jbut{background:var(--primary-soft); color:var(--primary-d); padding:11px 13px; border-radius:12px; margin:0 0 6px; font-weight:600; font-size:14px}
+
+/* ===== v12 : écran frigo, agenda ===== */
+.frigo-date{text-align:center; font-size:18px; color:var(--muted); margin-bottom:8px}
+.frigo-date::first-letter{text-transform:uppercase}
+.frigo-big{text-align:center; font-size:25px; font-weight:800; color:var(--primary); margin-bottom:16px; line-height:1.25}
+.frigo-line{font-size:19px; margin:10px 0; padding:13px 15px; background:var(--card); border-radius:13px; box-shadow:var(--shadow)}
+.agd-dots{font-size:9px; line-height:5px; color:var(--accent); letter-spacing:1px; height:6px; overflow:hidden}
