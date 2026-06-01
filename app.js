@@ -1540,7 +1540,15 @@ const SOINTOI = [
   "Parle de ce que tu vis : un ami, ta famille, un autre parent, un pro. Tu n'es pas seul.",
   "Baisse tes exigences les jours durs. « Assez bien » suffit largement.",
   "Le soir, repense à 3 choses qui ont été ok aujourd'hui, même petites.",
-  "Demander de l'aide n'est pas un échec, c'est une preuve de force."
+  "Demander de l'aide n'est pas un échec, c'est une preuve de force.",
+  "Prends une vraie pause repas, assis, même 10 minutes.",
+  "Sors prendre l'air chaque jour, même 5 minutes : ça remet les idées en place.",
+  "Couche-toi un peu plus tôt une fois cette semaine. Le sommeil répare tout.",
+  "Dis « non » sans culpabiliser quand tu es déjà débordé.",
+  "Bouge un peu : une marche, des étirements. Le corps soulage la tête.",
+  "Coupe les notifications le soir : ta soirée t'appartient.",
+  "Appelle un ami, vois du monde. Le lien recharge les batteries.",
+  "Pardonne-toi tes journées « moyennes ». Tu fais de ton mieux, et c'est déjà beaucoup."
 ];
 const DEFIS = [
   "Instaure le rituel du « rose & épine » à un dîner cette semaine.",
@@ -1585,14 +1593,38 @@ function openRessources() {
     <p class="muted" style="text-align:center;font-size:12px">Numéros susceptibles d'évoluer — vérifie en cas de besoin.</p></div>`;
   document.body.appendChild(ov); ov.querySelector('[data-back]').addEventListener('click', openGuide);
 }
+const RECHARGE = [
+  "☕ Un café ou un thé au calme, sans téléphone.",
+  "🎧 Deux chansons que tu adores, à fond.",
+  "🚶 Un tour du pâté de maisons.",
+  "🛁 Une douche un peu plus longue que d'habitude.",
+  "📖 Quelques pages d'un livre ou d'une BD.",
+  "🌳 Cinq minutes dehors, juste à respirer.",
+  "📝 Écrire ce qui te pèse sur un papier… puis le froisser.",
+  "💬 Un message à quelqu'un que tu aimes.",
+  "😌 Ne rien faire du tout, juste t'asseoir, deux minutes."
+];
+const ALERTES = [
+  "Tu es épuisé en permanence, même après avoir dormi.",
+  "Tu t'énerves pour un rien, ou tu te sens souvent triste ou vide.",
+  "Tu n'as plus goût à ce que tu aimais avant.",
+  "Tu te sens débordé au point de ne plus savoir par où commencer."
+];
 function openSoin() {
   closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
   ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>🧘 Prendre soin de toi</h2></div><div class="overlay-body">
     <div class="jbut">Un papa reposé et soutenu, c'est le plus beau cadeau pour tes enfants. 💛</div>
+    <div class="section-title">Au quotidien</div>
     <div class="card"><div class="list">${SOINTOI.map((t) => `<div class="item"><span class="label">${esc(t)}</span></div>`).join('')}</div></div>
-    <div class="section-title">Respiration anti-stress (1 min)</div>
-    <div class="card"><p style="margin:0">Inspire par le nez <b>4 sec</b> → bloque <b>4 sec</b> → souffle par la bouche <b>6 sec</b>. Recommence <b>5 fois</b>. Parfait avant de réagir à chaud.</p></div></div>`;
-  document.body.appendChild(ov); ov.querySelector('[data-back]').addEventListener('click', openGuide);
+    <div class="section-title">Te recharger en 5 minutes</div>
+    <div class="card"><div class="list">${RECHARGE.map((t) => `<div class="item"><span class="label">${esc(t)}</span></div>`).join('')}</div></div>
+    <div class="section-title">Respirer pour se calmer</div>
+    <div class="card"><p style="margin:0 0 12px"><b>Respiration 4-4-6</b><br>Inspire par le nez <b>4 sec</b> → bloque <b>4 sec</b> → souffle par la bouche <b>6 sec</b>. Recommence <b>5 fois</b>.</p><p style="margin:0"><b>Ancrage 5-4-3-2-1</b><br>Nomme 5 choses que tu vois, 4 que tu entends, 3 que tu touches, 2 que tu sens, 1 que tu goûtes. Le calme revient en 1 minute.</p></div>
+    <div class="section-title">T'écouter et demander de l'aide</div>
+    <div class="card"><div class="list">${ALERTES.map((t) => `<div class="item"><span class="label">${esc(t)}</span></div>`).join('')}</div><p class="muted" style="margin:10px 2px 0">Ces signaux sont normaux quand on porte beaucoup. En parler à ton médecin, à un proche ou à un psy, ce n'est pas un luxe — c'est prendre soin de toute la famille. Voir « 🆘 Ressources & soutien ».</p></div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', openGuide);
 }
 function openGuide() {
   closeOverlay();
@@ -1926,7 +1958,12 @@ function openSaisonProduits() {
 const HISTOIRES = [
   { emoji: '🦊', titre: 'Le petit renard qui ne voulait pas dormir', texte: "Au fond de la forêt, le petit renard Roux refusait de fermer les yeux. « Encore une minute ! » disait-il chaque soir. Sa maman lui montra la lune : « Tu vois, même elle se repose derrière les nuages. » Roux regarda les étoiles s'allumer une à une, comme de petites veilleuses. Il bâilla une fois, deux fois… « Si je dors, je vais rater la nuit », pensa-t-il. Mais la nuit, justement, c'est le moment où l'on rêve des plus belles aventures. Roux ferma enfin les yeux, et dans son rêve, il courait sur un grand tapis d'étoiles. Au matin, il était le renard le plus en forme de toute la forêt. Bonne nuit, petit renard." },
   { emoji: '🌙', titre: 'La lune et le doudou perdu', texte: "Lou avait perdu son doudou lapin. Impossible de dormir sans lui ! Par la fenêtre, la lune lui fit un clin d'œil. « Ne t'inquiète pas, dit-elle tout doucement, je vais éclairer ta chambre pour t'aider à le retrouver. » Sa lumière argentée glissa sous le lit, derrière les coussins, jusqu'à une petite oreille toute douce qui dépassait du panier de linge. « Le voilà ! » murmura Lou en serrant son lapin très fort. « Merci, madame la Lune. » La lune sourit : « Maintenant, dormez bien tous les deux. Je veille sur vous. » Et Lou s'endormit, son doudou contre la joue, bercé par la douce lumière de la lune." },
-  { emoji: '🐢', titre: 'La tortue qui rêvait de voler', texte: "Camille la tortue regardait les oiseaux avec envie. « Un jour, je volerai moi aussi », disait-elle. Les autres riaient : « Une tortue, ça ne vole pas ! » Mais Camille ne se décourageait pas. Un soir, elle grimpa tout en haut d'une colline, ferma les yeux… et sentit le vent caresser sa carapace. Elle n'avait pas d'ailes, mais là-haut, avec le vent et le ciel immense, elle se sentait plus légère qu'une plume. « Voler, se dit-elle, c'est peut-être juste se sentir libre. » Et chaque soir, du haut de sa colline, Camille souriait aux étoiles. Parfois, les plus beaux rêves ne se réalisent pas comme on l'imaginait — ils sont encore plus doux." }
+  { emoji: '🐢', titre: 'La tortue qui rêvait de voler', texte: "Camille la tortue regardait les oiseaux avec envie. « Un jour, je volerai moi aussi », disait-elle. Les autres riaient : « Une tortue, ça ne vole pas ! » Mais Camille ne se décourageait pas. Un soir, elle grimpa tout en haut d'une colline, ferma les yeux… et sentit le vent caresser sa carapace. Elle n'avait pas d'ailes, mais là-haut, avec le vent et le ciel immense, elle se sentait plus légère qu'une plume. « Voler, se dit-elle, c'est peut-être juste se sentir libre. » Et chaque soir, du haut de sa colline, Camille souriait aux étoiles. Parfois, les plus beaux rêves ne se réalisent pas comme on l'imaginait — ils sont encore plus doux." },
+  { emoji: '🐻', titre: 'Le gros ours qui avait peur du noir', texte: "Barnabé était un grand ours brun, fort et courageux le jour. Mais le soir venu, dans sa grotte, il n'aimait pas du tout le noir. « Et s'il y avait quelque chose ? » pensait-il. Un soir, il prit son courage à deux pattes et alluma une petite lanterne. Le noir n'était plus partout : juste dans les coins, bien sage. Il comprit que le noir ne cachait rien de méchant — c'était simplement la nuit qui s'installait, douce et tranquille, pour que tout le monde se repose. Barnabé souffla sa lanterne, écouta le vent dans les arbres, et s'endormit en serrant son oreiller. Le lendemain, il dit à ses amis : « Le noir, c'est juste un gros câlin de la nuit. » Bonne nuit, Barnabé." },
+  { emoji: '⭐', titre: "L'étoile qui voulait descendre sur Terre", texte: "Tout là-haut, une petite étoile s'ennuyait de briller toujours au même endroit. « Je veux voir la Terre de près ! » disait-elle. Une nuit, elle demanda à un nuage de l'aider à descendre. Mais plus elle s'approchait, plus elle comprenait une chose : vue de près, elle n'éclairait qu'un tout petit coin. Vue du ciel, elle éclairait les rêves de milliers d'enfants endormis. Alors elle remonta tout doucement à sa place et se remit à scintiller de toutes ses forces. « Ma place est ici, à veiller sur tout le monde. » Et si tu regardes par la fenêtre, c'est peut-être elle qui te fait un clin d'œil, juste avant que tu fermes les yeux. Fais de beaux rêves." },
+  { emoji: '🐌', titre: "L'escargot pressé", texte: "Gaston l'escargot en avait assez d'être lent. « Tout le monde va plus vite que moi ! » râlait-il. Un matin, il décida de se dépêcher coûte que coûte. Il fonça… et passa à côté de la rosée qui brillait, des fraises mûres, du chant des oiseaux. Le soir, fatigué, il n'avait rien vu de sa journée. Le lendemain, il reprit son rythme tranquille. Il sentit le parfum des fleurs, salua une coccinelle, goûta une feuille délicieuse. « Finalement, sourit Gaston, aller doucement, c'est profiter de tout. » Et il s'endormit dans sa jolie coquille, le cœur léger. Parfois, prendre son temps, c'est le plus beau des cadeaux. Bonne nuit, petit escargot." },
+  { emoji: '🦉', titre: 'Le hibou qui gardait les rêves', texte: "Chaque nuit, Hulotte le hibou faisait le tour de la forêt. Mais il ne chassait pas : il veillait sur les rêves des animaux endormis. D'un coup d'aile, il rattrapait les cauchemars qui s'échappaient et les transformait en petits nuages de coton, tout doux. Au lapin, il offrait des rêves de carottes géantes ; à l'écureuil, des forêts pleines de noisettes ; aux enfants, des rêves de câlins et de rires. « Dormez tranquilles, murmurait-il, je suis là. » Au petit matin, fatigué mais content, Hulotte rentrait se coucher, sachant que tout le monde avait bien dormi. Ce soir, lui aussi veille sur toi. Ferme les yeux : ton plus beau rêve t'attend." },
+  { emoji: '🐳', titre: 'La baleine et le petit poisson', texte: "Dans l'océan vivait Mona, une immense baleine, et Pic, un tout petit poisson argenté. « Tu es si grande, et moi si petit, soupirait Pic. À quoi je sers ? » Mona sourit : « Regarde. » Quand un courant trop fort arrivait, le petit Pic se faufilait entre les rochers où Mona ne pouvait pas aller, et trouvait le chemin. « Tu vois, dit Mona, grand ou petit, chacun a sa force. » Depuis, ils voyageaient ensemble : la grande pour protéger, le petit pour guider. Et le soir, Pic s'endormait à l'abri, tout près de son énorme amie qui le berçait de son chant grave. Tu es peut-être petit, toi aussi — mais tu comptes énormément. Bonne nuit." }
 ];
 function openHistoires() {
   closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
