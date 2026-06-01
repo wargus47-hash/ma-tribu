@@ -157,7 +157,7 @@ function seedRecettes() {
 }
 function seed() {
   return {
-    version: 10,
+    version: 11,
     reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false, theme: 'clair', accent: 'teal', midiSemaine: false, notifs: false, lastNotif: '', consignesSitter: '' },
     courses: [],
     recurrents: [
@@ -209,7 +209,11 @@ function seed() {
     devoirs: [],
     recompenses: seedRecompenses(),
     pharmacie: seedPharmacie(),
-    menage: seedMenage()
+    menage: seedMenage(),
+    finances: { revenu: 0, charges: [], depenses: [] },
+    journal: [],
+    cadeaux: [],
+    coffre: []
   };
 }
 
@@ -252,13 +256,17 @@ function migrate() {
   if (data.reglages.consignesSitter === undefined) data.reglages.consignesSitter = '';
   data.pharmacie = data.pharmacie || seedPharmacie();
   data.menage = data.menage || seedMenage();
+  if (!data.finances) data.finances = { revenu: 0, charges: [], depenses: [] }; else { data.finances.charges = data.finances.charges || []; data.finances.depenses = data.finances.depenses || []; if (data.finances.revenu === undefined) data.finances.revenu = 0; }
+  data.journal = data.journal || [];
+  data.cadeaux = data.cadeaux || [];
+  data.coffre = data.coffre || [];
   data.listesExtra = data.listesExtra || [];
   if (!data.sante) data.sante = seedSante();
   ['petit', 'grand'].forEach((c) => { data.sante[c] = data.sante[c] || seedSante().petit; data.sante[c].notes = data.sante[c].notes || []; data.sante[c].medicaments = data.sante[c].medicaments || []; data.sante[c].mesures = data.sante[c].mesures || []; if (data.sante[c].vetements === undefined) data.sante[c].vetements = ''; if (data.sante[c].pointure === undefined) data.sante[c].pointure = ''; });
   if (!data.routines) data.routines = s.routines;
   else if (data.routines.matin || data.routines.soir) { const old = data.routines; data.routines = seedRoutines(); data.routines.petit = { matin: old.matin || [], soir: old.soir || [] }; }
   else { data.routines.petit = data.routines.petit || seedRoutines().petit; data.routines.grand = data.routines.grand || seedRoutines().grand; }
-  data.version = 10;
+  data.version = 11;
 }
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) { toast('⚠️ Sauvegarde impossible (mémoire pleine ?)'); } }
 
@@ -396,11 +404,13 @@ function renderAccueil(el) {
   const dc = el.querySelector('#d-cart');
   if (dc) dc.addEventListener('click', () => addRecetteToCourses(ti, 'soir'));
   const av = accueilTodayHtml(); if (av) el.insertAdjacentHTML('beforeend', av);
-  el.insertAdjacentHTML('beforeend', `<div class="section-title">Outils</div><div class="quick"><button id="ac-guide"><span class="e">📖</span>Guide du parent</button><button id="ac-dep"><span class="e">💶</span>Dépenses partagées</button><button id="ac-sitter"><span class="e">🧑‍🍼</span>Mode baby-sitter</button><button id="ac-idee"><span class="e">💡</span>Idée anti-écran</button></div><div class="card" style="margin-top:14px"><b>💛 Conseil du jour</b><br><span class="muted">${esc(conseilDuJour())}</span></div><div class="card"><b>🎯 Le défi de la semaine</b><br><span class="muted">${esc(defiSemaine())}</span></div>`);
+  el.insertAdjacentHTML('beforeend', `<div class="section-title">Outils</div><div class="quick"><button id="ac-guide"><span class="e">📖</span>Guide du parent</button><button id="ac-dep"><span class="e">💶</span>Dépenses partagées</button><button id="ac-sitter"><span class="e">🧑‍🍼</span>Mode baby-sitter</button><button id="ac-idee"><span class="e">💡</span>Idée anti-écran</button><button id="ac-budget"><span class="e">💰</span>Budget du mois</button><button id="ac-journal"><span class="e">📔</span>Livre de bord</button></div><div class="card" style="margin-top:14px"><b>💛 Conseil du jour</b><br><span class="muted">${esc(conseilDuJour())}</span></div><div class="card"><b>🎯 Le défi de la semaine</b><br><span class="muted">${esc(defiSemaine())}</span></div>`);
   el.querySelector('#ac-guide').addEventListener('click', openGuide);
   el.querySelector('#ac-dep').addEventListener('click', openDepenses);
   el.querySelector('#ac-sitter').addEventListener('click', openSitter);
   el.querySelector('#ac-idee').addEventListener('click', () => openGameDetail(JEUX[Math.floor(Math.random() * JEUX.length)].id));
+  el.querySelector('#ac-budget').addEventListener('click', openBudget);
+  el.querySelector('#ac-journal').addEventListener('click', openJournal);
 }
 function rappelLabel(s) {
   const diff = Math.round((parseISO(s) - parseISO(todayISO())) / 86400000);
@@ -831,8 +841,9 @@ function renderFamille(el) {
   });
   const ntClear = document.getElementById('nt-clear');
   if (ntClear) ntClear.addEventListener('click', () => { data.notes = data.notes.filter((n) => !n.fait); save(); renderFamille(el); });
-  el.insertAdjacentHTML('beforeend', santeButtonHtml(child) + recompensesCardHtml(child) + devoirsCardHtml() + anniversairesCardHtml());
+  el.insertAdjacentHTML('beforeend', santeButtonHtml(child) + recompensesCardHtml(child) + devoirsCardHtml() + anniversairesCardHtml() + `<button class="btn btn-block" id="f-cadeaux" style="margin-top:4px">🎁 Idées cadeaux</button>`);
   el.querySelector('#f-sante').addEventListener('click', () => openSante(child));
+  el.querySelector('#f-cadeaux').addEventListener('click', openCadeaux);
   wireRecompenses(el, child);
   wireDevoirs(el);
   wireAnniversaires(el);
@@ -891,6 +902,7 @@ function openReglages() {
           <button class="btn btn-block" id="ct-add">Ajouter le contact</button>
         </div>
       </div>
+      <div class="set-section"><h3>🔐 Infos importantes</h3><div class="card"><button class="btn btn-block" id="set-coffre">Ouvrir le coffre à infos (sécu, assurances, codes…)</button></div></div>
       <div class="set-section"><h3>🧑‍🍼 Consignes baby-sitter</h3>
         <div class="card"><textarea class="input" id="set-consignes" rows="3" placeholder="Ce que la nounou doit savoir (horaires, repas, écrans, urgences…)">${esc(data.reglages.consignesSitter || '')}</textarea><button class="btn btn-block" id="set-consignes-save" style="margin-top:8px">Enregistrer</button></div>
       </div>
@@ -928,6 +940,7 @@ function openReglages() {
   ov.querySelector('#op-midi').addEventListener('click', () => { data.reglages.midiSemaine = !data.reglages.midiSemaine; save(); openReglages(); });
   ov.querySelector('#op-notif').addEventListener('click', () => { if (data.reglages.notifs) { data.reglages.notifs = false; save(); openReglages(); } else requestNotifs(); });
   ov.querySelector('#set-consignes-save').addEventListener('click', () => { data.reglages.consignesSitter = ov.querySelector('#set-consignes').value.trim(); save(); toast('Consignes enregistrées'); });
+  ov.querySelector('#set-coffre').addEventListener('click', openCoffre);
 }
 function exportData() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1576,8 +1589,8 @@ function openSoin() {
 }
 function openGuide() {
   closeOverlay();
-  const items = [['🧠 Que faire quand…', 'openSituations'], ['💬 Phrases qui aident', 'openPhrases'], ['💛 Rituels & conseils', 'openRituels'], ['🧭 Repères par âge', 'openReperes'], ['🧰 Fiches pratiques maison', 'openFiches'], ['🧹 Planning ménage', 'openMenage'], ['🩹 En cas de pépin', 'openUrgences'], ['💊 Trousse à pharmacie', 'openTrousse'], ['📋 Checklists de saison', 'openSaison'], ['📑 Démarches (parent séparé)', 'openDemarches'], ['🆘 Ressources & soutien', 'openRessources'], ['🧘 Prendre soin de toi', 'openSoin']];
-  const map = { openFiches, openMenage, openUrgences, openTrousse, openReperes, openRituels, openSaison, openSituations, openPhrases, openDemarches, openRessources, openSoin };
+  const items = [['🧠 Que faire quand…', 'openSituations'], ['💬 Phrases qui aident', 'openPhrases'], ['💛 Rituels & conseils', 'openRituels'], ['🧭 Repères par âge', 'openReperes'], ['🧰 Fiches pratiques maison', 'openFiches'], ['🧹 Planning ménage', 'openMenage'], ['🩹 En cas de pépin', 'openUrgences'], ['💊 Trousse à pharmacie', 'openTrousse'], ['📋 Checklists de saison', 'openSaison'], ['🎂 Organiser un anniversaire', 'openAnnivGuide'], ['📑 Démarches (parent séparé)', 'openDemarches'], ['🆘 Ressources & soutien', 'openRessources'], ['🧘 Prendre soin de toi', 'openSoin']];
+  const map = { openFiches, openMenage, openUrgences, openTrousse, openReperes, openRituels, openSaison, openSituations, openPhrases, openDemarches, openRessources, openSoin, openAnnivGuide };
   const ov = document.createElement('div'); ov.className = 'overlay';
   ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>📖 Le guide du parent</h2></div>
     <div class="overlay-body"><p class="muted" style="margin:0 2px 12px">Tout ce que personne ne t'a expliqué, réuni ici. Tu gères déjà très bien 💪</p>
@@ -1665,6 +1678,96 @@ function openSaison() {
   document.body.appendChild(ov);
   ov.querySelector('[data-back]').addEventListener('click', openGuide);
   ov.querySelectorAll('[data-saison]').forEach((b) => b.addEventListener('click', () => { const k = b.dataset.saison; const l = { id: uid(), nom: k, items: SAISONS[k].map((n) => ({ id: uid(), nom: n, fait: false })) }; data.listesExtra.push(l); activeListe = l.id; save(); closeOverlay(); setTab('courses'); toast('Liste « ' + k + ' » créée ✓'); }));
+}
+
+/* ============================================================
+   v11 : besoins du papa solo — budget, journal, cadeaux, coffre
+   ============================================================ */
+function openBudget() {
+  closeOverlay();
+  const f = data.finances; const mk = todayISO().slice(0, 7);
+  const totCharges = f.charges.reduce((s, c) => s + (+c.montant || 0), 0);
+  const depMois = f.depenses.filter((d) => (d.date || '').slice(0, 7) === mk);
+  const totDep = depMois.reduce((s, d) => s + (+d.montant || 0), 0);
+  const reste = (+f.revenu || 0) - totCharges - totDep;
+  const cats = ['Maison', 'Énergie', 'Courses', 'Enfants', 'Transport', 'Loisirs', 'Santé', 'Autre'];
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>💰 Budget du mois</h2></div>
+    <div class="overlay-body">
+      <div class="card" style="text-align:center"><div class="muted">Reste à vivre ce mois-ci</div><div class="budg-total" style="color:${reste >= 0 ? 'var(--ok)' : 'var(--danger)'}">${eur(reste)} €</div><div class="muted" style="font-size:12px">Revenu ${eur(f.revenu)} − charges ${eur(totCharges)} − dépenses ${eur(totDep)}</div></div>
+      <div class="card"><label class="fld">Revenu mensuel (€)<input class="input" id="bu-rev" type="number" inputmode="decimal" value="${f.revenu || ''}" placeholder="ex. 2000" /></label><button class="btn btn-mini btn-block" id="bu-rev-save">Enregistrer le revenu</button></div>
+      <div class="section-title">Charges fixes (chaque mois)</div>
+      <div class="card"><div class="list">${f.charges.length ? f.charges.map((c) => `<div class="item" data-chid="${c.id}"><span class="label">${esc(c.nom)}</span><span class="tag">${eur(c.montant)} €</span><button class="x" data-chdel>✕</button></div>`).join('') : '<div class="empty"><span class="e">🏠</span>Loyer, énergie, assurances, abonnements…</div>'}</div>
+        <div class="field-row" style="margin-top:10px"><input class="input" id="ch-nom" placeholder="Ex. Loyer" /><input class="input" id="ch-mt" type="number" inputmode="decimal" placeholder="€" style="flex:0 0 30%" /></div><button class="btn btn-block" id="ch-add">Ajouter une charge</button></div>
+      <div class="section-title">Dépenses du mois · ${eur(totDep)} €</div>
+      <div class="card"><div class="field-row"><input class="input" id="de-mt" type="number" inputmode="decimal" placeholder="Montant €" /><select class="select" id="de-cat">${cats.map((c) => `<option>${c}</option>`).join('')}</select></div><div class="field-row"><input class="input" id="de-note" placeholder="Note (facultatif)" /><button class="btn btn-primary" id="de-add">＋</button></div>
+        <div class="list" style="margin-top:8px">${[...depMois].reverse().slice(0, 8).map((d) => `<div class="item" data-deid="${d.id}"><span class="label">${esc(d.note || d.cat)} <span class="muted">· ${esc(d.cat)} · ${esc(frShort(d.date))}</span></span><span class="tag">${eur(d.montant)} €</span><button class="x" data-dedel>✕</button></div>`).join('')}</div></div>
+      <p class="muted" style="text-align:center;font-size:12px">100 % privé, stocké sur ton appareil.</p>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
+  ov.querySelector('#bu-rev-save').addEventListener('click', () => { f.revenu = parseFloat(ov.querySelector('#bu-rev').value) || 0; save(); openBudget(); });
+  ov.querySelector('#ch-add').addEventListener('click', () => { const n = ov.querySelector('#ch-nom').value.trim(); const m = parseFloat(ov.querySelector('#ch-mt').value); if (!n || isNaN(m)) { toast('Nom + montant'); return; } f.charges.push({ id: uid(), nom: n, montant: m }); save(); openBudget(); });
+  ov.querySelectorAll('[data-chid]').forEach((row) => row.querySelector('[data-chdel]').addEventListener('click', () => { f.charges = f.charges.filter((x) => x.id !== row.dataset.chid); save(); openBudget(); }));
+  ov.querySelector('#de-add').addEventListener('click', () => { const m = parseFloat(ov.querySelector('#de-mt').value); if (isNaN(m)) { toast('Indique un montant'); return; } f.depenses.push({ id: uid(), date: todayISO(), montant: m, cat: ov.querySelector('#de-cat').value, note: ov.querySelector('#de-note').value.trim() }); save(); openBudget(); });
+  ov.querySelectorAll('[data-deid]').forEach((row) => row.querySelector('[data-dedel]').addEventListener('click', () => { f.depenses = f.depenses.filter((x) => x.id !== row.dataset.deid); save(); openBudget(); }));
+}
+function openJournal() {
+  closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
+  const sorted = [...data.journal].reverse();
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>📔 Livre de bord</h2></div>
+    <div class="overlay-body">
+      <p class="muted" style="margin:0 2px 10px">Garde une trace des beaux moments. Tu seras content de les relire plus tard. 💛</p>
+      <div class="card"><div class="field-row"><input class="input" id="jo-txt" placeholder="Un bon moment d'aujourd'hui…" enterkeyhint="done" /></div><button class="btn btn-primary btn-block" id="jo-add">Ajouter au journal</button></div>
+      <div class="card"><div class="list">${sorted.length ? sorted.map((n) => `<div class="item" data-joid="${n.id}"><span class="label">${esc(n.texte)}<br><span class="muted" style="font-size:12px">${esc(frShort(n.date))}</span></span><button class="x" data-jodel>✕</button></div>`).join('') : `<div class="empty"><span class="e">📔</span>Ton premier souvenir t'attend.</div>`}</div></div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
+  const add = () => { const t = ov.querySelector('#jo-txt').value.trim(); if (!t) return; data.journal.push({ id: uid(), date: todayISO(), texte: t }); save(); openJournal(); };
+  ov.querySelector('#jo-add').addEventListener('click', add);
+  ov.querySelector('#jo-txt').addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
+  ov.querySelectorAll('[data-joid]').forEach((row) => row.querySelector('[data-jodel]').addEventListener('click', () => { data.journal = data.journal.filter((x) => x.id !== row.dataset.joid); save(); openJournal(); }));
+}
+function openCadeaux() {
+  closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>🎁 Idées cadeaux</h2></div>
+    <div class="overlay-body">
+      <p class="muted" style="margin:0 2px 10px">Note les idées au fil de l'eau pour ne plus jamais être pris de court.</p>
+      <div class="card"><div class="field-row"><input class="input" id="ca-pour" placeholder="Pour qui ?" /><input class="input" id="ca-occ" placeholder="Occasion" style="flex:0 0 38%" /></div><div class="field-row"><input class="input" id="ca-idee" placeholder="Idée de cadeau" /><button class="btn btn-primary" id="ca-add">＋</button></div></div>
+      <div class="card"><div class="list">${data.cadeaux.length ? data.cadeaux.map((c) => `<div class="item ${c.fait ? 'done' : ''}" data-caid="${c.id}"><span class="check">${c.fait ? '✓' : ''}</span><span class="label">${esc(c.idee)} <span class="muted">· ${esc(c.pour)}${c.occasion ? ' · ' + esc(c.occasion) : ''}</span></span><button class="x" data-act="del">✕</button></div>`).join('') : `<div class="empty"><span class="e">🎁</span>Aucune idée notée. Coche quand c'est acheté.</div>`}</div></div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
+  ov.querySelector('#ca-add').addEventListener('click', () => { const idee = ov.querySelector('#ca-idee').value.trim(); const pour = ov.querySelector('#ca-pour').value.trim(); if (!idee || !pour) { toast('Pour qui + idée'); return; } data.cadeaux.push({ id: uid(), pour, idee, occasion: ov.querySelector('#ca-occ').value.trim(), fait: false }); save(); openCadeaux(); });
+  ov.querySelectorAll('[data-caid]').forEach((row) => { const id = row.dataset.caid; wireRow(row, () => { const c = data.cadeaux.find((x) => x.id === id); c.fait = !c.fait; save(); openCadeaux(); }, () => { data.cadeaux = data.cadeaux.filter((x) => x.id !== id); save(); openCadeaux(); }); });
+}
+function openCoffre() {
+  closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>🔐 Infos importantes</h2></div>
+    <div class="overlay-body">
+      <p class="muted" style="margin:0 2px 10px">N° de sécu, assurances, code de l'immeuble, artisans, box internet… au même endroit.</p>
+      <div class="card"><div class="field-row"><input class="input" id="co-nom" placeholder="Intitulé (ex. Assurance habitation)" /></div><div class="field-row"><input class="input" id="co-val" placeholder="Numéro / info / contact" /><button class="btn btn-primary" id="co-add">＋</button></div></div>
+      <div class="card"><div class="list">${data.coffre.length ? data.coffre.map((c) => `<div class="item" data-coid="${c.id}"><span class="label"><b>${esc(c.nom)}</b><br><span class="muted">${esc(c.valeur)}</span></span><button class="x" data-codel>✕</button></div>`).join('') : `<div class="empty"><span class="e">🔐</span>Rien pour l'instant.</div>`}</div></div>
+      <p class="muted" style="text-align:center;font-size:12px">Stocké uniquement sur cet appareil. Évite d'y mettre des mots de passe sensibles.</p>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
+  ov.querySelector('#co-add').addEventListener('click', () => { const n = ov.querySelector('#co-nom').value.trim(); const v = ov.querySelector('#co-val').value.trim(); if (!n) { toast('Indique un intitulé'); return; } data.coffre.push({ id: uid(), nom: n, valeur: v }); save(); openCoffre(); });
+  ov.querySelectorAll('[data-coid]').forEach((row) => row.querySelector('[data-codel]').addEventListener('click', () => { data.coffre = data.coffre.filter((x) => x.id !== row.dataset.coid); save(); openCoffre(); }));
+}
+const ANNIV_ETAPES = [
+  ['📅 3-4 semaines avant', ["Fixe la date et l'heure (souvent un après-midi de 14h à 17h).", "Établis la liste d'invités avec ton enfant (souvent : son âge + 1).", "Choisis un thème s'il en veut un (super-héros, animaux, princesse…)."]],
+  ['✉️ 2 semaines avant', ["Envoie les invitations (papier, ou message aux parents).", "Commande ou prévois le gâteau (ou fais-le maison, voir l'onglet Repas).", "Prépare 3-4 jeux adaptés à l'âge (onglet Jeux !)."]],
+  ['🛒 1 semaine avant', ["Courses : déco, boissons, goûter, bougies, sacs-poubelle.", "Confirme les présences auprès des parents.", "Prépare les pochettes-surprises et le cadeau."]],
+  ['🎉 Le jour J', ["Installe la déco le matin, range les objets fragiles.", "Alterne jeux calmes et jeux de défoulement.", "Gâteau + bougies + photos.", "Prévois un moment « cadeaux » et remercie chaque copain au départ."]]
+];
+function openAnnivGuide() {
+  closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>🎂 Organiser un anniversaire</h2></div><div class="overlay-body">
+    ${ANNIV_ETAPES.map(([t, l]) => `<div class="section-title">${esc(t)}</div><div class="card"><ul class="steps">${l.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></div>`).join('')}
+    <p class="muted" style="text-align:center;font-size:12px">Le plus important : que ton enfant se sente fêté et aimé. Le reste est bonus 💛</p></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', openGuide);
 }
 
 /* ---------- Démarrage ---------- */
