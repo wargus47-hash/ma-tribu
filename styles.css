@@ -247,3 +247,13 @@ body.theme-sombre{
 body.theme-sombre .welcome{background:var(--card); border-color:var(--line)}
 body.theme-sombre .hint{background:#2a2a1c; border-color:#544b1f; color:#e7d9a3}
 body.theme-sombre .slotpill{background:#3a3320; color:#f0d99a}
+
+/* ===== v7 : listes, favoris, carnet de santé ===== */
+.lists{display:flex; gap:8px; overflow-x:auto; padding:2px 0 12px; -webkit-overflow-scrolling:touch}
+.lchip{flex:0 0 auto; border:1.5px solid var(--line); background:var(--card); color:var(--ink); border-radius:999px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer}
+.lchip.on{background:var(--primary); color:#fff; border-color:var(--primary)}
+.lchip.add{color:var(--primary); border-style:dashed}
+.chip.on{background:var(--primary); color:#fff; border-color:var(--primary)}
+.rfav{background:none; border:0; font-size:15px; cursor:pointer; padding:2px 4px; flex:0 0 auto; line-height:1}
+.fld{display:block; margin-bottom:12px; font-size:13px; font-weight:600; color:var(--muted)}
+.fld .input, .fld textarea{margin-top:5px; font-weight:400; color:var(--ink)}

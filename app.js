@@ -29,6 +29,37 @@ function applyTheme() {
   const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.setAttribute('content', a.primary);
 }
 
+/* Helpers v7 : activités, anniversaires, recettes, notifications */
+function todayDow() { return (new Date().getDay() + 6) % 7; }
+function tempsMin(t) { if (!t) return 999; t = String(t).toLowerCase(); let m = 0; const h = t.match(/(\d+)\s*h/); if (h) m += parseInt(h[1], 10) * 60; const mn = t.match(/(\d+)\s*min/); if (mn) m += parseInt(mn[1], 10); if (!h && !mn) { const n = parseInt(t, 10); if (!isNaN(n)) m = n; } return m || 999; }
+const DESSERT_IDS = new Set(['r27', 'r28', 'r45', 'r46', 'r47', 'r48']);
+function seedSante() { const blank = () => ({ allergies: '', traitements: '', medecin: '', groupe: '', notes: [] }); return { petit: blank(), grand: blank() }; }
+function nextAnnivInfo(s) {
+  if (!s) return null; const p = s.split('-'); const mo = +p[1], da = +p[2]; if (!mo || !da) return null;
+  const now = new Date(); now.setHours(0, 0, 0, 0); let d = new Date(now.getFullYear(), mo - 1, da); if (d < now) d = new Date(now.getFullYear() + 1, mo - 1, da);
+  const days = Math.round((d - now) / 86400000); const age = (p[0] && +p[0] > 1900) ? d.getFullYear() - +p[0] : null; return { days, date: iso(d), age };
+}
+function annivLabel(info) { if (!info) return ''; if (info.days === 0) return "🎉 aujourd'hui"; if (info.days === 1) return 'demain'; if (info.days < 30) return 'dans ' + info.days + ' j'; return frShort(info.date); }
+function notifyToday(force) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (!force && data.reglages.lastNotif === todayISO()) return;
+  const items = [];
+  data.rappels.filter((r) => !r.fait && r.date && r.date <= todayISO()).forEach((r) => items.push('🔔 ' + r.texte));
+  data.activites.filter((a) => a.jour === todayDow()).sort((a, b) => (a.heure || '').localeCompare(b.heure || '')).forEach((a) => items.push('📆 ' + (a.heure ? a.heure + ' — ' : '') + a.nom));
+  data.anniversaires.forEach((a) => { const n = nextAnnivInfo(a.date); if (n && n.days === 0) items.push('🎂 Anniversaire de ' + a.nom + ' !'); });
+  if (!items.length) { if (force) toast("Rien de spécial aujourd'hui 🙂"); return; }
+  try { new Notification('Ma Tribu — aujourd\'hui', { body: items.slice(0, 6).join('\n'), icon: 'icon.svg' }); data.reglages.lastNotif = todayISO(); save(); } catch (e) {}
+}
+function requestNotifs() {
+  if (!('Notification' in window)) { toast('Notifications non supportées ici'); return; }
+  Notification.requestPermission().then((p) => {
+    data.reglages.notifs = (p === 'granted'); save();
+    toast(p === 'granted' ? 'Notifications activées ✓' : 'Notifications refusées');
+    if (p === 'granted') notifyToday(true);
+    if (document.querySelector('.overlay')) openReglages();
+  });
+}
+
 /* ---------- Utilitaires ---------- */
 let _seq = 0;
 function uid() { return 'id' + Date.now().toString(36) + (_seq++).toString(36); }
@@ -124,8 +155,8 @@ function seedRecettes() {
 }
 function seed() {
   return {
-    version: 6,
-    reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false, theme: 'clair', accent: 'teal', midiSemaine: false },
+    version: 7,
+    reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false, theme: 'clair', accent: 'teal', midiSemaine: false, notifs: false, lastNotif: '' },
     courses: [],
     recurrents: [
       { nom: 'Pommes', rayon: 'Fruits & Légumes' }, { nom: 'Bananes', rayon: 'Fruits & Légumes' }, { nom: 'Clémentines', rayon: 'Fruits & Légumes' },
@@ -162,7 +193,12 @@ function seed() {
     rappels: [],
     contacts: [],
     budget: [],
-    notes: []
+    notes: [],
+    activites: [],
+    sante: seedSante(),
+    anniversaires: [],
+    favoris: [],
+    listesExtra: []
   };
 }
 
@@ -180,6 +216,8 @@ function migrate() {
   if (data.reglages.theme === undefined) data.reglages.theme = 'clair';
   if (data.reglages.accent === undefined) data.reglages.accent = 'teal';
   if (data.reglages.midiSemaine === undefined) data.reglages.midiSemaine = false;
+  if (data.reglages.notifs === undefined) data.reglages.notifs = false;
+  if (data.reglages.lastNotif === undefined) data.reglages.lastNotif = '';
   data.courses = data.courses || [];
   data.recurrents = data.recurrents || s.recurrents;
   data.recettes = seedRecettes().concat((data.recettes || []).filter((r) => !/^r\d+$/.test(r.id)));
@@ -190,10 +228,15 @@ function migrate() {
   data.contacts = data.contacts || [];
   data.budget = data.budget || [];
   data.notes = data.notes || [];
+  data.activites = data.activites || [];
+  data.anniversaires = data.anniversaires || [];
+  data.favoris = data.favoris || [];
+  data.listesExtra = data.listesExtra || [];
+  if (!data.sante) data.sante = seedSante(); else { data.sante.petit = data.sante.petit || seedSante().petit; data.sante.grand = data.sante.grand || seedSante().grand; }
   if (!data.routines) data.routines = s.routines;
   else if (data.routines.matin || data.routines.soir) { const old = data.routines; data.routines = seedRoutines(); data.routines.petit = { matin: old.matin || [], soir: old.soir || [] }; }
   else { data.routines.petit = data.routines.petit || seedRoutines().petit; data.routines.grand = data.routines.grand || seedRoutines().grand; }
-  data.version = 6;
+  data.version = 7;
 }
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) { toast('⚠️ Sauvegarde impossible (mémoire pleine ?)'); } }
 
@@ -220,6 +263,7 @@ let showRecForm = false;
 let editRec = false;
 let rangeMode = false;
 let rangeStart = null;
+let activeListe = 'main';
 const TITLES = { accueil: "Aujourd'hui", courses: 'Liste de courses', repas: 'Repas de la semaine', garde: 'Garde & transitions', famille: 'Routines & rappels' };
 
 function setTab(tab) {
@@ -325,6 +369,7 @@ function renderAccueil(el) {
   if (dd) dd.addEventListener('click', pickTonight);
   const dc = el.querySelector('#d-cart');
   if (dc) dc.addEventListener('click', () => addRecetteToCourses(ti, 'soir'));
+  const av = accueilTodayHtml(); if (av) el.insertAdjacentHTML('beforeend', av);
 }
 function rappelLabel(s) {
   const diff = Math.round((parseISO(s) - parseISO(todayISO())) / 86400000);
@@ -336,6 +381,7 @@ function rappelLabel(s) {
    COURSES (+ gestion récurrents + budget)
    ============================================================ */
 function renderCourses(el) {
+  if (activeListe !== 'main') { renderListeExtra(el); return; }
   const restants = data.courses.filter((c) => !c.fait).length;
   const groups = {};
   data.courses.forEach((c) => { (groups[c.rayon] = groups[c.rayon] || []).push(c); });
@@ -414,6 +460,8 @@ function renderCourses(el) {
   const addBg = () => { const montant = parseFloat(document.getElementById('bg-montant').value); if (isNaN(montant)) { toast('Indique un montant'); return; } data.budget.push({ id: uid(), date: todayISO(), montant, note: document.getElementById('bg-note').value.trim() }); save(); renderCourses(el); };
   document.getElementById('bg-add').addEventListener('click', addBg);
   el.querySelectorAll('[data-bid]').forEach((row) => row.querySelector('[data-delb]').addEventListener('click', () => { data.budget = data.budget.filter((x) => x.id !== row.dataset.bid); save(); renderCourses(el); }));
+  el.insertAdjacentHTML('afterbegin', listSelectorHtml());
+  wireListSelector(el);
 }
 
 /* ============================================================
@@ -555,29 +603,34 @@ function recipeRowsHtml(filter) {
   if (!list.length) return `<div class="empty">Aucune recette trouvée.</div>`;
   return list.map((r) => `<div class="item recipe" data-rid="${r.id}"><span class="label">${r.emoji} ${esc(r.nom)}</span><button class="rinfo" data-info="${r.id}" title="Voir la recette">ⓘ</button><span class="go">＋</span></div>`).join('');
 }
-function recipeBookRowsHtml(filter) {
+function recipeBookRowsHtml(filter, cat) {
   const f = (filter || '').toLowerCase().trim();
-  const list = data.recettes.filter((r) => !f || r.nom.toLowerCase().includes(f));
-  if (!list.length) return `<div class="empty">Aucune recette trouvée.</div>`;
-  return list.map((r) => `<div class="item recipe" data-rid="${r.id}"><span class="label">${r.emoji} ${esc(r.nom)}</span>${r.temps ? `<span class="muted" style="margin-right:6px">${esc(r.temps)}</span>` : ''}<span class="go">›</span></div>`).join('');
+  let list = data.recettes.filter((r) => !f || r.nom.toLowerCase().includes(f));
+  if (cat === 'fav') list = list.filter((r) => data.favoris.includes(r.id));
+  else if (cat === 'rapide') list = list.filter((r) => tempsMin(r.temps) <= 25);
+  else if (cat === 'dessert') list = list.filter((r) => DESSERT_IDS.has(r.id));
+  if (!list.length) return `<div class="empty">Aucune recette.</div>`;
+  return list.map((r) => { const fav = data.favoris.includes(r.id); return `<div class="item recipe" data-rid="${r.id}"><span class="label">${r.emoji} ${esc(r.nom)}</span>${r.temps ? `<span class="muted" style="margin-right:2px">${esc(r.temps)}</span>` : ''}<button class="rfav" data-fav="${r.id}">${fav ? '❤️' : '🤍'}</button><span class="go">›</span></div>`; }).join('');
 }
 function openRecipeBook() {
   closeOverlay();
-  let filter = '';
+  let filter = ''; let cat = 'tout';
+  const cats = [['tout', 'Tout'], ['fav', '❤️ Favoris'], ['rapide', '⚡ Rapide'], ['dessert', '🍰 Desserts']];
   const ov = document.createElement('div'); ov.className = 'overlay';
   ov.innerHTML = `
     <div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>📖 Livre de recettes</h2></div>
     <div class="overlay-body">
       <input class="input" id="rb-search" placeholder="Rechercher une recette…" autocomplete="off" />
-      <p class="muted" style="margin:10px 2px">${data.recettes.length} recettes — touche pour voir la préparation</p>
-      <div class="list" id="rb-list">${recipeBookRowsHtml('')}</div>
+      <div class="chips" id="rb-cats" style="margin-top:10px">${cats.map((c) => `<button class="chip ${c[0] === 'tout' ? 'on' : ''}" data-cat="${c[0]}">${c[1]}</button>`).join('')}</div>
+      <div class="list" id="rb-list" style="margin-top:8px">${recipeBookRowsHtml('', 'tout')}</div>
     </div>`;
   document.body.appendChild(ov);
-  const wire = () => ov.querySelectorAll('.recipe').forEach((row) => row.addEventListener('click', () => openRecipeDetail(row.dataset.rid, 'book')));
+  const wire = () => ov.querySelectorAll('.recipe').forEach((row) => { row.addEventListener('click', () => openRecipeDetail(row.dataset.rid, 'book')); const fb = row.querySelector('[data-fav]'); if (fb) fb.addEventListener('click', (e) => { e.stopPropagation(); toggleFav(row.dataset.rid); refresh(); }); });
+  const refresh = () => { ov.querySelector('#rb-list').innerHTML = recipeBookRowsHtml(filter, cat); wire(); };
   wire();
   ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
-  const s = ov.querySelector('#rb-search');
-  s.addEventListener('input', () => { filter = s.value; ov.querySelector('#rb-list').innerHTML = recipeBookRowsHtml(filter); wire(); });
+  ov.querySelector('#rb-search').addEventListener('input', (e) => { filter = e.target.value; refresh(); });
+  ov.querySelectorAll('[data-cat]').forEach((b) => b.addEventListener('click', () => { cat = b.dataset.cat; ov.querySelectorAll('[data-cat]').forEach((x) => x.classList.toggle('on', x === b)); refresh(); }));
 }
 function openRecipeDetail(rid, ctx) {
   const r = data.recettes.find((x) => x.id === rid); if (!r) return;
@@ -658,6 +711,8 @@ function renderGarde(el) {
   document.getElementById('tr-add').addEventListener('click', addTr);
   document.getElementById('tr-nom').addEventListener('keydown', (e) => { if (e.key === 'Enter') addTr(); });
   document.getElementById('tr-reset').addEventListener('click', () => { data.transition.forEach((x) => x.fait = false); save(); renderGarde(el); toast('Sac réinitialisé — prêt pour le prochain échange'); });
+  el.insertAdjacentHTML('beforeend', activitesCardHtml());
+  wireActivites(el);
 }
 
 /* ============================================================
@@ -742,6 +797,9 @@ function renderFamille(el) {
   });
   const ntClear = document.getElementById('nt-clear');
   if (ntClear) ntClear.addEventListener('click', () => { data.notes = data.notes.filter((n) => !n.fait); save(); renderFamille(el); });
+  el.insertAdjacentHTML('beforeend', santeButtonHtml(child) + anniversairesCardHtml());
+  el.querySelector('#f-sante').addEventListener('click', () => openSante(child));
+  wireAnniversaires(el);
 }
 function routineItems(child, mom) {
   return data.routines[child][mom].map((it) => `<div class="item ${it.fait ? 'done' : ''}" data-id="${it.id}"><span class="check">${it.fait ? '✓' : ''}</span><span class="label">${esc(it.texte)}</span><button class="x" data-act="del">✕</button></div>`).join('');
@@ -812,6 +870,8 @@ function openReglages() {
           <div class="opt-row"><span>🎨 Couleur de l'appli</span><div class="swatches">${Object.keys(ACCENTS).map((k) => `<button class="swatch ${data.reglages.accent === k ? 'on' : ''}" data-acc="${k}" style="background:${ACCENTS[k].primary}" title="${ACCENTS[k].nom}"></button>`).join('')}</div></div>
           <div class="divider"></div>
           <div class="opt-row"><span>🍽️ Repas du midi en semaine</span><button class="toggle ${data.reglages.midiSemaine ? 'on' : ''}" id="op-midi"><i></i></button></div>
+          <div class="divider"></div>
+          <div class="opt-row"><span>🔔 Notifications<br><span class="muted" style="font-weight:400;font-size:12px">Résumé du jour à l'ouverture de l'appli</span></span><button class="toggle ${data.reglages.notifs ? 'on' : ''}" id="op-notif"><i></i></button></div>
         </div>
       </div>
       <p class="muted" style="text-align:center">Ma Tribu · v6 · 100 % sur ton appareil</p>
@@ -827,6 +887,7 @@ function openReglages() {
   ov.querySelector('#op-theme').addEventListener('click', () => { data.reglages.theme = data.reglages.theme === 'sombre' ? 'clair' : 'sombre'; save(); applyTheme(); openReglages(); });
   ov.querySelectorAll('[data-acc]').forEach((b) => b.addEventListener('click', () => { data.reglages.accent = b.dataset.acc; save(); applyTheme(); openReglages(); }));
   ov.querySelector('#op-midi').addEventListener('click', () => { data.reglages.midiSemaine = !data.reglages.midiSemaine; save(); openReglages(); });
+  ov.querySelector('#op-notif').addEventListener('click', () => { if (data.reglages.notifs) { data.reglages.notifs = false; save(); openReglages(); } else requestNotifs(); });
 }
 function exportData() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -844,6 +905,117 @@ function importData(file) {
   r.readAsText(file);
 }
 
+/* ============================================================
+   v7 : activités, anniversaires, carnet de santé, listes, favoris
+   ============================================================ */
+function accueilTodayHtml() {
+  const acts = data.activites.filter((a) => a.jour === todayDow()).sort((a, b) => (a.heure || '').localeCompare(b.heure || ''));
+  const annivs = data.anniversaires.map((a) => ({ a, n: nextAnnivInfo(a.date) })).filter((o) => o.n && o.n.days <= 14).sort((x, y) => x.n.days - y.n.days);
+  if (!acts.length && !annivs.length) return '';
+  let rows = '';
+  acts.forEach((a) => { rows += `<div class="item"><span class="label">📆 ${a.heure ? `<b>${esc(a.heure)}</b> · ` : ''}${esc(a.nom)}</span></div>`; });
+  annivs.forEach((o) => { rows += `<div class="item"><span class="label">🎂 ${esc(o.a.nom)}</span><span class="tag">${esc(annivLabel(o.n))}</span></div>`; });
+  return `<div class="section-title">📆 À venir</div><div class="card">${rows}</div>`;
+}
+
+function activitesCardHtml() {
+  const whoLabel = { grand: data.reglages.grand, petit: data.reglages.petit, deux: 'Les 2' };
+  const whoClass = { grand: 'who-grand', petit: 'who-petit', deux: 'who-deux' };
+  let body = '';
+  for (let j = 0; j < 7; j++) {
+    const acts = data.activites.filter((a) => a.jour === j).sort((a, b) => (a.heure || '').localeCompare(b.heure || ''));
+    if (!acts.length) continue;
+    body += `<div class="rayon-title">${cap(JOURS[j])}</div>` + acts.map((a) => `<div class="item" data-actid="${a.id}"><span class="label">${a.heure ? `<b>${esc(a.heure)}</b> · ` : ''}${esc(a.nom)}</span><span class="tag ${whoClass[a.qui] || ''}">${esc(whoLabel[a.qui] || '')}</span><button class="x" data-actdel>✕</button></div>`).join('');
+  }
+  if (!body) body = `<div class="empty"><span class="e">📆</span>Ajoute les activités récurrentes des enfants (sport, musique, école…).</div>`;
+  return `<div class="section-title">📆 Activités de la semaine</div><div class="card">${body}
+    <div class="field-row" style="margin-top:12px"><select class="select" id="ac-jour">${JOURS.map((d, i) => `<option value="${i}">${cap(d)}</option>`).join('')}</select><input class="input" id="ac-heure" type="time" /></div>
+    <div class="field-row"><input class="input" id="ac-nom" placeholder="Activité (ex. Foot)" /><select class="select" id="ac-qui"><option value="deux">Les 2</option><option value="grand">${esc(data.reglages.grand)}</option><option value="petit">${esc(data.reglages.petit)}</option></select></div>
+    <button class="btn btn-block" id="ac-add">Ajouter l'activité</button></div>`;
+}
+function wireActivites(scope) {
+  const add = () => { const nom = scope.querySelector('#ac-nom').value.trim(); if (!nom) return; data.activites.push({ id: uid(), jour: +scope.querySelector('#ac-jour').value, heure: scope.querySelector('#ac-heure').value, nom, qui: scope.querySelector('#ac-qui').value }); save(); render(); };
+  scope.querySelector('#ac-add').addEventListener('click', add);
+  scope.querySelectorAll('[data-actid]').forEach((row) => row.querySelector('[data-actdel]').addEventListener('click', () => { data.activites = data.activites.filter((x) => x.id !== row.dataset.actid); save(); render(); }));
+}
+
+function anniversairesCardHtml() {
+  const list = data.anniversaires.map((a) => ({ a, n: nextAnnivInfo(a.date) })).filter((o) => o.n).sort((x, y) => x.n.days - y.n.days);
+  const body = list.length ? list.map((o) => `<div class="item" data-annid="${o.a.id}"><span class="label">🎂 ${esc(o.a.nom)}${o.n.age != null ? ` <span class="muted">(${o.n.age} ans)</span>` : ''}</span><span class="tag">${esc(annivLabel(o.n))}</span><button class="x" data-anndel>✕</button></div>`).join('') : `<div class="empty"><span class="e">🎂</span>Ajoute les anniversaires à ne pas oublier.</div>`;
+  return `<div class="section-title">🎂 Anniversaires</div><div class="card">${body}
+    <div class="field-row" style="margin-top:12px"><input class="input" id="an-nom" placeholder="Prénom" /><input class="input" id="an-date" type="date" /></div>
+    <button class="btn btn-block" id="an-add">Ajouter</button></div>`;
+}
+function wireAnniversaires(scope) {
+  scope.querySelector('#an-add').addEventListener('click', () => { const nom = scope.querySelector('#an-nom').value.trim(); const date = scope.querySelector('#an-date').value; if (!nom || !date) { toast('Prénom + date requis'); return; } data.anniversaires.push({ id: uid(), nom, date }); save(); render(); });
+  scope.querySelectorAll('[data-annid]').forEach((row) => row.querySelector('[data-anndel]').addEventListener('click', () => { data.anniversaires = data.anniversaires.filter((x) => x.id !== row.dataset.annid); save(); render(); }));
+}
+
+function santeButtonHtml(child) { return `<button class="btn btn-block" id="f-sante" style="margin-top:4px;margin-bottom:14px">🩺 Carnet de santé — ${esc(child === 'petit' ? data.reglages.petit : data.reglages.grand)}</button>`; }
+function openSante(child) {
+  closeOverlay();
+  const s = data.sante[child]; const name = child === 'petit' ? data.reglages.petit : data.reglages.grand;
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>←</button><h2>🩺 ${esc(name)}</h2></div>
+    <div class="overlay-body">
+      <div class="card">
+        <label class="fld">Groupe sanguin<input class="input" id="sa-groupe" value="${esc(s.groupe || '')}" placeholder="ex. A+" /></label>
+        <label class="fld">Allergies<textarea class="input" id="sa-allerg" rows="2" placeholder="ex. arachide, pollen…">${esc(s.allergies || '')}</textarea></label>
+        <label class="fld">Traitement en cours<textarea class="input" id="sa-trait" rows="2" placeholder="ex. Ventoline si besoin">${esc(s.traitements || '')}</textarea></label>
+        <label class="fld">Médecin / pédiatre<input class="input" id="sa-med" value="${esc(s.medecin || '')}" placeholder="Nom + téléphone" /></label>
+        <button class="btn btn-primary btn-block" id="sa-save">Enregistrer</button>
+      </div>
+      <div class="section-title">Vaccins & événements</div>
+      <div class="card">
+        <div class="list">${s.notes.length ? s.notes.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map((n) => `<div class="item" data-snid="${n.id}"><span class="label">${esc(n.texte)}${n.date ? ` <span class="muted">· ${esc(frShort(n.date))}</span>` : ''}</span><button class="x" data-sndel>✕</button></div>`).join('') : `<div class="empty"><span class="e">💉</span>Note les vaccins, rappels, opérations…</div>`}</div>
+        <div class="field-row" style="margin-top:10px"><input class="input" id="sn-txt" placeholder="ex. Vaccin DTP" /><input class="input" id="sn-date" type="date" /></div>
+        <button class="btn btn-block" id="sn-add">Ajouter</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
+  ov.querySelector('#sa-save').addEventListener('click', () => { s.groupe = ov.querySelector('#sa-groupe').value.trim(); s.allergies = ov.querySelector('#sa-allerg').value.trim(); s.traitements = ov.querySelector('#sa-trait').value.trim(); s.medecin = ov.querySelector('#sa-med').value.trim(); save(); toast('Carnet enregistré ✓'); });
+  ov.querySelector('#sn-add').addEventListener('click', () => { const t = ov.querySelector('#sn-txt').value.trim(); if (!t) return; s.notes.push({ id: uid(), texte: t, date: ov.querySelector('#sn-date').value }); save(); openSante(child); });
+  ov.querySelectorAll('[data-snid]').forEach((row) => row.querySelector('[data-sndel]').addEventListener('click', () => { s.notes = s.notes.filter((x) => x.id !== row.dataset.snid); save(); openSante(child); }));
+}
+
+function toggleFav(rid) { const i = data.favoris.indexOf(rid); if (i >= 0) data.favoris.splice(i, 1); else data.favoris.push(rid); save(); }
+
+function listSelectorHtml() {
+  let chips = `<button class="lchip ${activeListe === 'main' ? 'on' : ''}" data-lst="main">🛒 Courses</button>`;
+  chips += data.listesExtra.map((l) => `<button class="lchip ${activeListe === l.id ? 'on' : ''}" data-lst="${l.id}">${esc(l.nom)}</button>`).join('');
+  chips += `<button class="lchip add" data-lst="+">＋ Liste</button>`;
+  return `<div class="lists">${chips}</div>`;
+}
+function wireListSelector(scope) {
+  scope.querySelectorAll('[data-lst]').forEach((b) => b.addEventListener('click', () => {
+    const v = b.dataset.lst;
+    if (v === '+') { const nom = prompt('Nom de la nouvelle liste (ex. Pharmacie, Maison) :'); if (nom && nom.trim()) { const id = uid(); data.listesExtra.push({ id, nom: nom.trim(), items: [] }); activeListe = id; save(); } else return; }
+    else activeListe = v;
+    renderCourses(scope);
+  }));
+}
+function renderListeExtra(el) {
+  const l = data.listesExtra.find((x) => x.id === activeListe);
+  if (!l) { activeListe = 'main'; renderCourses(el); return; }
+  const restants = l.items.filter((i) => !i.fait).length;
+  el.innerHTML = listSelectorHtml() + `
+    <div class="card"><div class="field-row"><input class="input" id="le-nom" placeholder="Ajouter à « ${esc(l.nom)} »…" autocomplete="off" enterkeyhint="done" /><button class="btn btn-primary" id="le-add">＋</button></div></div>
+    <div class="section-title">${esc(l.nom)} ${restants ? '· ' + restants : ''}</div>
+    <div class="card">
+      <div class="list">${l.items.length ? l.items.slice().sort((a, b) => a.fait - b.fait).map((i) => `<div class="item ${i.fait ? 'done' : ''}" data-leid="${i.id}"><span class="check">${i.fait ? '✓' : ''}</span><span class="label">${esc(i.nom)}</span><button class="x" data-act="del">✕</button></div>`).join('') : `<div class="empty"><span class="e">📝</span>Liste vide.</div>`}</div>
+      <div class="btn-row" style="margin-top:12px"><button class="btn btn-mini" id="le-share">📤 Partager</button><button class="btn btn-mini" id="le-rename">✏️ Renommer</button><button class="btn btn-mini" id="le-del" style="color:var(--danger)">🗑️ Supprimer</button></div>
+    </div>`;
+  wireListSelector(el);
+  const add = () => { const v = el.querySelector('#le-nom').value.trim(); if (!v) return; l.items.push({ id: uid(), nom: v, fait: false }); save(); renderListeExtra(el); };
+  el.querySelector('#le-add').addEventListener('click', add);
+  el.querySelector('#le-nom').addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
+  el.querySelectorAll('[data-leid]').forEach((row) => { const id = row.dataset.leid; wireRow(row, () => { const it = l.items.find((x) => x.id === id); it.fait = !it.fait; save(); renderListeExtra(el); }, () => { l.items = l.items.filter((x) => x.id !== id); save(); renderListeExtra(el); }); });
+  el.querySelector('#le-share').addEventListener('click', () => { const todo = l.items.filter((i) => !i.fait); if (!todo.length) { toast('Liste vide'); return; } const t = '📝 ' + l.nom + '\n' + todo.map((i) => '• ' + i.nom).join('\n'); if (navigator.share) navigator.share({ title: l.nom, text: t }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('Copié ✓')); });
+  el.querySelector('#le-rename').addEventListener('click', () => { const n = prompt('Nouveau nom :', l.nom); if (n && n.trim()) { l.nom = n.trim(); save(); renderListeExtra(el); } });
+  el.querySelector('#le-del').addEventListener('click', () => confirmDialog('Supprimer la liste « ' + l.nom + ' » ?', () => { data.listesExtra = data.listesExtra.filter((x) => x.id !== l.id); activeListe = 'main'; save(); renderCourses(el); }, { danger: true, yes: 'Supprimer' }));
+}
+
 /* ---------- Démarrage ---------- */
 function shareList() {
   const groups = {};
@@ -858,6 +1030,7 @@ function shareList() {
 function boot() {
   load();
   applyTheme();
+  if (data.reglages.notifs) notifyToday();
   document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
   document.getElementById('btn-reset').addEventListener('click', openReglages);
   setTab('accueil');
