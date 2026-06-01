@@ -155,7 +155,7 @@ function seedRecettes() {
 }
 function seed() {
   return {
-    version: 7,
+    version: 8,
     reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false, theme: 'clair', accent: 'teal', midiSemaine: false, notifs: false, lastNotif: '' },
     courses: [],
     recurrents: [
@@ -198,7 +198,8 @@ function seed() {
     sante: seedSante(),
     anniversaires: [],
     favoris: [],
-    listesExtra: []
+    listesExtra: [],
+    favJeux: []
   };
 }
 
@@ -231,12 +232,13 @@ function migrate() {
   data.activites = data.activites || [];
   data.anniversaires = data.anniversaires || [];
   data.favoris = data.favoris || [];
+  data.favJeux = data.favJeux || [];
   data.listesExtra = data.listesExtra || [];
   if (!data.sante) data.sante = seedSante(); else { data.sante.petit = data.sante.petit || seedSante().petit; data.sante.grand = data.sante.grand || seedSante().grand; }
   if (!data.routines) data.routines = s.routines;
   else if (data.routines.matin || data.routines.soir) { const old = data.routines; data.routines = seedRoutines(); data.routines.petit = { matin: old.matin || [], soir: old.soir || [] }; }
   else { data.routines.petit = data.routines.petit || seedRoutines().petit; data.routines.grand = data.routines.grand || seedRoutines().grand; }
-  data.version = 7;
+  data.version = 8;
 }
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) { toast('⚠️ Sauvegarde impossible (mémoire pleine ?)'); } }
 
@@ -264,7 +266,11 @@ let editRec = false;
 let rangeMode = false;
 let rangeStart = null;
 let activeListe = 'main';
-const TITLES = { accueil: "Aujourd'hui", courses: 'Liste de courses', repas: 'Repas de la semaine', garde: 'Garde & transitions', famille: 'Routines & rappels' };
+let jxAge = 'tous';
+let jxLieu = 'tous';
+let jxFav = false;
+let jxSearch = '';
+const TITLES = { accueil: "Aujourd'hui", courses: 'Liste de courses', repas: 'Repas de la semaine', garde: 'Garde & transitions', famille: 'Routines & rappels', jeux: 'Bibliothèque de jeux' };
 
 function setTab(tab) {
   activeTab = tab;
@@ -277,7 +283,7 @@ function setTab(tab) {
 }
 function render() {
   const el = document.getElementById('screen-' + activeTab);
-  ({ accueil: renderAccueil, courses: renderCourses, repas: renderRepas, garde: renderGarde, famille: renderFamille }[activeTab])(el);
+  ({ accueil: renderAccueil, courses: renderCourses, repas: renderRepas, garde: renderGarde, famille: renderFamille, jeux: renderJeux }[activeTab])(el);
 }
 
 /* Ligne de check-list cliquable sur toute sa surface (le ✕ ne coche pas) */
@@ -1014,6 +1020,106 @@ function renderListeExtra(el) {
   el.querySelector('#le-share').addEventListener('click', () => { const todo = l.items.filter((i) => !i.fait); if (!todo.length) { toast('Liste vide'); return; } const t = '📝 ' + l.nom + '\n' + todo.map((i) => '• ' + i.nom).join('\n'); if (navigator.share) navigator.share({ title: l.nom, text: t }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('Copié ✓')); });
   el.querySelector('#le-rename').addEventListener('click', () => { const n = prompt('Nouveau nom :', l.nom); if (n && n.trim()) { l.nom = n.trim(); save(); renderListeExtra(el); } });
   el.querySelector('#le-del').addEventListener('click', () => confirmDialog('Supprimer la liste « ' + l.nom + ' » ?', () => { data.listesExtra = data.listesExtra.filter((x) => x.id !== l.id); activeListe = 'main'; save(); renderCourses(el); }, { danger: true, yes: 'Supprimer' }));
+}
+
+/* ============================================================
+   JEUX — bibliothèque pour sortir les enfants des écrans
+   ============================================================ */
+const JEUX = [
+  { id: 'j1', nom: 'Cache-cache', emoji: '🙈', cat: 'Plein air', lieu: 'partout', ageMin: 3, ageMax: 12, joueurs: '3+', duree: '15 min', materiel: 'Aucun', but: 'Se cacher sans se faire trouver.', regles: ["Un joueur compte les yeux fermés jusqu'à 20 pendant que les autres se cachent.", "Il part ensuite chercher les cachés.", "Le premier trouvé comptera au tour suivant."], variante: "« 1-2-3 piano » : un caché peut délivrer les autres en touchant le camp avant le chercheur." },
+  { id: 'j2', nom: '1, 2, 3, Soleil', emoji: '☀️', cat: 'Plein air', lieu: 'partout', ageMin: 4, ageMax: 12, joueurs: '3+', duree: '15 min', materiel: 'Aucun', but: 'Avancer sans se faire voir bouger.', regles: ["Un meneur face à un mur crie « 1, 2, 3, soleil ! » puis se retourne.", "Les autres avancent quand il ne regarde pas et se figent quand il se retourne.", "Celui qui bouge repart au départ. Le premier à toucher le meneur gagne."] },
+  { id: 'j3', nom: "L'épervier", emoji: '🦅', cat: 'Plein air', lieu: 'ext', ageMin: 6, ageMax: 12, joueurs: '6+', duree: '15 min', materiel: 'Aucun', but: 'Traverser sans se faire attraper.', regles: ["Un « épervier » est au milieu, les autres d'un côté du terrain.", "À « Épervier, sors ! » tout le monde traverse vers l'autre côté.", "Les joueurs touchés deviennent éperviers. Le dernier libre gagne."] },
+  { id: 'j4', nom: 'Chat perché', emoji: '🐱', cat: 'Plein air', lieu: 'partout', ageMin: 4, ageMax: 10, joueurs: '4+', duree: '15 min', materiel: 'Aucun', but: 'Ne pas être touché par le chat.', regles: ["Un joueur est le « chat » et poursuit les autres.", "On est sauvé si on est perché (pieds surélevés sur un banc, une marche…).", "Le joueur touché au sol devient le chat."] },
+  { id: 'j5', nom: 'Le béret', emoji: '🎽', cat: 'Plein air', lieu: 'ext', ageMin: 6, ageMax: 12, joueurs: '6+', duree: '20 min', materiel: 'Un foulard', but: 'Rapporter le foulard dans son camp.', regles: ["Deux équipes face à face, chaque joueur a un numéro. Un foulard au milieu.", "On appelle un numéro : les deux joueurs concernés courent attraper le foulard.", "Il faut le rapporter sans se faire toucher par l'adversaire. 1 point par manche."] },
+  { id: 'j6', nom: 'Balle au prisonnier', emoji: '⛹️', cat: 'Plein air', lieu: 'ext', ageMin: 7, ageMax: 12, joueurs: '6+', duree: '20 min', materiel: 'Un ballon mou', but: "Éliminer l'équipe adverse.", regles: ["Deux équipes. On se lance le ballon pour toucher les adversaires.", "Un joueur touché va en « prison » derrière l'équipe adverse.", "Il est délivré s'il attrape une balle. L'équipe qui élimine tout le monde gagne."] },
+  { id: 'j7', nom: 'Marelle', emoji: '🦶', cat: 'Plein air', lieu: 'partout', ageMin: 4, ageMax: 10, joueurs: '1+', duree: '10 min', materiel: 'Une craie + un palet', but: 'Faire le parcours à cloche-pied.', regles: ["Dessine une marelle (cases 1 à 10) à la craie.", "Lance le palet dans la case 1, saute à cloche-pied en évitant cette case.", "Récupère le palet au retour. À chaque tour, le palet monte d'une case."] },
+  { id: 'j8', nom: 'Course en sac', emoji: '👟', cat: 'Plein air', lieu: 'ext', ageMin: 4, ageMax: 12, joueurs: '2+', duree: '10 min', materiel: "Un sac ou une taie d'oreiller", but: 'Arriver le premier en sautant.', regles: ["Chaque joueur entre dans un grand sac, tenu à la taille.", "Au signal, tout le monde avance en sautant jusqu'à la ligne d'arrivée.", "Le premier arrivé sans tomber gagne."] },
+  { id: 'j9', nom: 'Colin-maillard', emoji: '🧣', cat: 'Plein air', lieu: 'partout', ageMin: 5, ageMax: 10, joueurs: '4+', duree: '15 min', materiel: 'Un foulard', but: 'Attraper et reconnaître un joueur les yeux bandés.', regles: ["Un joueur a les yeux bandés et tourne sur lui-même.", "Il cherche à attraper les autres, qui l'évitent en silence.", "Quand il attrape quelqu'un, il doit deviner qui c'est au toucher."] },
+  { id: 'j10', nom: 'Loup glacé', emoji: '🧊', cat: 'Plein air', lieu: 'ext', ageMin: 5, ageMax: 11, joueurs: '5+', duree: '15 min', materiel: 'Aucun', but: 'Ne pas être gelé (ou délivrer les gelés).', regles: ["Un « loup » poursuit les autres.", "Touché = gelé, immobile bras écartés.", "Un joueur libre peut délivrer un gelé en passant sous ses bras. Le loup doit tous les geler."] },
+  { id: 'j11', nom: 'Saute-mouton', emoji: '🐑', cat: 'Plein air', lieu: 'ext', ageMin: 6, ageMax: 11, joueurs: '2+', duree: '10 min', materiel: 'Aucun', but: 'Sauter par-dessus les autres.', regles: ["Un joueur se met courbé, mains sur les genoux.", "Les autres sautent par-dessus son dos à tour de rôle.", "On enchaîne en se replaçant courbé un peu plus loin."] },
+  { id: 'j12', nom: 'Jacques a dit', emoji: '🗣️', cat: 'Sans matériel', lieu: 'partout', ageMin: 4, ageMax: 10, joueurs: '3+', duree: '10 min', materiel: 'Aucun', but: "N'obéir que si « Jacques a dit ».", regles: ["Le meneur donne des ordres : « Jacques a dit : touchez-vous le nez ».", "On exécute seulement si la phrase commence par « Jacques a dit ».", "Si on obéit à un ordre sans cette formule, on est éliminé."] },
+  { id: 'j13', nom: 'Ni oui ni non', emoji: '🙊', cat: 'Sans matériel', lieu: 'partout', ageMin: 6, ageMax: 12, joueurs: '2+', duree: '10 min', materiel: 'Aucun', but: "Répondre sans dire « oui » ni « non ».", regles: ["Un joueur pose plein de questions rapides.", "L'autre doit répondre sans jamais dire « oui » ni « non ».", "S'il se trompe, on inverse les rôles. Tenir le plus longtemps possible !"] },
+  { id: 'j14', nom: 'Qui suis-je ?', emoji: '🤔', cat: 'Devinettes', lieu: 'partout', ageMin: 5, ageMax: 12, joueurs: '2+', duree: '10 min', materiel: 'Aucun', but: 'Faire deviner un animal, un objet ou un personnage.', regles: ["Un joueur pense à quelque chose en secret.", "Les autres posent des questions pour deviner ce que c'est.", "Celui qui trouve fait deviner à son tour."] },
+  { id: 'j15', nom: 'Les charades', emoji: '🎭', cat: 'Devinettes', lieu: 'partout', ageMin: 7, ageMax: 12, joueurs: '2+', duree: '15 min', materiel: 'Aucun', but: 'Deviner un mot décomposé en syllabes.', regles: ["« Mon premier… mon deuxième… mon tout… » : chaque partie décrit une syllabe.", "Les autres devinent chaque syllabe puis le mot complet.", "Ex. : mon premier est un métal précieux (or), mon deuxième se boit (thé)… mon tout pique (ortie) !"] },
+  { id: 'j16', nom: 'Le portrait (20 questions)', emoji: '❓', cat: 'Devinettes', lieu: 'partout', ageMin: 7, ageMax: 12, joueurs: '2+', duree: '10 min', materiel: 'Aucun', but: 'Deviner en 20 questions maximum.', regles: ["Un joueur choisit secrètement une personne ou une chose.", "Les autres posent jusqu'à 20 questions à réponse « oui ou non ».", "Il faut trouver avant la 20ᵉ question !"] },
+  { id: 'j17', nom: 'Statue musicale', emoji: '🗿', cat: 'Mouvement', lieu: 'int', ageMin: 4, ageMax: 10, joueurs: '3+', duree: '10 min', materiel: 'De la musique', but: "Se figer quand la musique s'arrête.", regles: ["On danse tant que la musique joue.", "Quand elle s'arrête, tout le monde se fige en statue.", "Celui qui bouge est éliminé. Le dernier immobile gagne."] },
+  { id: 'j18', nom: 'Téléphone arabe', emoji: '☎️', cat: 'Sans matériel', lieu: 'partout', ageMin: 5, ageMax: 12, joueurs: '4+', duree: '5 min', materiel: 'Aucun', but: "Transmettre une phrase à l'oreille.", regles: ["En file, le premier murmure une phrase à l'oreille du suivant.", "Chacun la répète à l'oreille du voisin, une seule fois.", "Le dernier la dit à voix haute : fou rire garanti avec les déformations !"] },
+  { id: 'j19', nom: "Le chef d'orchestre", emoji: '🎻', cat: 'Devinettes', lieu: 'int', ageMin: 6, ageMax: 12, joueurs: '4+', duree: '10 min', materiel: 'Aucun', but: 'Trouver qui mène les gestes.', regles: ["Un joueur sort. Les autres choisissent un « chef » qui lance des gestes (taper des mains…).", "Tous imitent le chef discrètement.", "Le joueur revenu doit deviner qui est le chef d'orchestre."] },
+  { id: 'j20', nom: 'Jeu de Kim', emoji: '🧠', cat: 'Calme', lieu: 'int', ageMin: 5, ageMax: 12, joueurs: '1+', duree: '10 min', materiel: 'Quelques objets + un torchon', but: 'Mémoriser des objets.', regles: ["Pose une dizaine d'objets sur la table, observe-les 30 secondes.", "Couvre-les avec un torchon : les enfants listent ceux dont ils se souviennent.", "Variante : retire un objet en cachette, il faut deviner lequel manque."], variante: 'En enlever un en douce et faire deviner lequel a disparu.' },
+  { id: 'j21', nom: 'Le mime', emoji: '🤫', cat: 'Devinettes', lieu: 'partout', ageMin: 6, ageMax: 12, joueurs: '3+', duree: '15 min', materiel: 'Aucun', but: 'Faire deviner sans parler.', regles: ["Un joueur mime un métier, un animal ou un film, sans parler ni faire de bruit.", "Les autres devinent.", "Celui qui trouve mime à son tour."] },
+  { id: 'j22', nom: 'Pierre-feuille-ciseaux', emoji: '✊', cat: 'Sans matériel', lieu: 'partout', ageMin: 4, ageMax: 12, joueurs: '2', duree: '2 min', materiel: 'Aucun', but: "Battre le signe de l'autre.", regles: ["Au compte de trois, chacun montre pierre (poing), feuille (main à plat) ou ciseaux (deux doigts).", "Pierre bat ciseaux, ciseaux battent feuille, feuille bat pierre.", "Parfait pour départager qui commence un autre jeu !"] },
+  { id: 'j23', nom: 'Le roi du silence', emoji: '🤐', cat: 'Calme', lieu: 'partout', ageMin: 4, ageMax: 12, joueurs: '2+', duree: 'libre', materiel: 'Aucun', but: 'Se taire le plus longtemps possible.', regles: ["Au signal, tout le monde doit se taire et rester calme.", "Le premier qui parle ou rit a perdu.", "Idéal pour un moment de calme… ou en voiture !"] },
+  { id: 'j24', nom: 'Histoire à inventer', emoji: '📚', cat: 'Calme', lieu: 'int', ageMin: 6, ageMax: 12, joueurs: '3+', duree: '15 min', materiel: 'Aucun', but: 'Construire une histoire à plusieurs.', regles: ["Le premier dit une phrase pour commencer une histoire.", "Chacun ajoute une phrase à tour de rôle.", "On obtient une histoire farfelue et collective."] },
+  { id: 'j25', nom: 'Le morpion', emoji: '⭕', cat: 'Papier-crayon', lieu: 'partout', ageMin: 5, ageMax: 12, joueurs: '2', duree: '5 min', materiel: 'Papier + crayon', but: 'Aligner 3 symboles.', regles: ["Trace une grille de 3×3 cases.", "Chacun pose à tour de rôle son symbole (O ou X).", "Le premier à aligner 3 symboles (ligne, colonne ou diagonale) gagne."] },
+  { id: 'j26', nom: 'Le pendu', emoji: '🔤', cat: 'Papier-crayon', lieu: 'partout', ageMin: 6, ageMax: 12, joueurs: '2+', duree: '10 min', materiel: 'Papier + crayon', but: 'Deviner le mot lettre par lettre.', regles: ["Un joueur choisit un mot et trace un tiret par lettre.", "Les autres proposent des lettres ; les bonnes se placent, les mauvaises ajoutent un trait au pendu.", "Trouver le mot avant que le dessin du pendu soit complet."] },
+  { id: 'j27', nom: 'Le petit bac', emoji: '🔡', cat: 'Papier-crayon', lieu: 'partout', ageMin: 7, ageMax: 12, joueurs: '2+', duree: '15 min', materiel: 'Papier + crayon', but: 'Trouver des mots par catégorie.', regles: ["Choisissez des catégories (prénom, animal, ville, objet…) et une lettre au hasard.", "Chacun écrit un mot par catégorie commençant par cette lettre, le plus vite possible.", "« Stop ! » dès que quelqu'un a fini. On compte les points."] },
+  { id: 'j28', nom: 'Bataille navale', emoji: '🚢', cat: 'Papier-crayon', lieu: 'int', ageMin: 8, ageMax: 12, joueurs: '2', duree: '20 min', materiel: 'Papier + crayon', but: 'Couler les bateaux adverses.', regles: ["Chacun dessine 2 grilles et place ses bateaux en secret.", "À tour de rôle, on annonce une case (ex. B4) : « touché » ou « à l'eau ».", "Le premier à couler toute la flotte adverse gagne."] },
+  { id: 'j29', nom: 'Points et carrés', emoji: '🔳', cat: 'Papier-crayon', lieu: 'partout', ageMin: 7, ageMax: 12, joueurs: '2', duree: '15 min', materiel: 'Papier + crayon', but: 'Fermer le plus de carrés.', regles: ["Dessine une grille de points. Chacun trace un trait entre deux points voisins.", "Fermer un carré = on le marque à son initiale et on rejoue.", "À la fin, celui qui a le plus de carrés gagne."] },
+  { id: 'j30', nom: 'Cadavre exquis dessiné', emoji: '🖍️', cat: 'Créatif', lieu: 'int', ageMin: 5, ageMax: 12, joueurs: '3+', duree: '10 min', materiel: 'Papier + crayon', but: 'Dessiner un personnage à plusieurs.', regles: ["Le premier dessine une tête en haut de la feuille, puis la cache en pliant.", "Le suivant dessine le buste sans voir, plie, et ainsi de suite (jambes, pieds).", "On déplie : un personnage rigolo apparaît !"] },
+  { id: 'j31', nom: 'La bataille (cartes)', emoji: '🃏', cat: 'Cartes', lieu: 'partout', ageMin: 4, ageMax: 10, joueurs: '2+', duree: '15 min', materiel: 'Un jeu de cartes', but: 'Remporter toutes les cartes.', regles: ["Distribuez toutes les cartes face cachée, en tas devant chacun.", "Chacun retourne sa carte du dessus : la plus forte remporte les deux.", "Cartes égales = « bataille ». Celui qui a tout gagné gagne."] },
+  { id: 'j32', nom: 'Le pouilleux', emoji: '🐈', cat: 'Cartes', lieu: 'int', ageMin: 5, ageMax: 10, joueurs: '3+', duree: '15 min', materiel: 'Un jeu (retirer un valet)', but: 'Ne pas garder le valet seul.', regles: ["Retire un valet du jeu, distribue tout. Chacun jette ses paires.", "À tour de rôle, on pioche une carte chez le voisin pour former des paires.", "Celui qui reste avec le valet seul (le « pouilleux ») a perdu."] },
+  { id: 'j33', nom: 'Le menteur', emoji: '🤥', cat: 'Cartes', lieu: 'int', ageMin: 7, ageMax: 12, joueurs: '3+', duree: '20 min', materiel: 'Un jeu de cartes', but: 'Se débarrasser de ses cartes en bluffant.', regles: ["Distribue tout. On pose des cartes face cachée en annonçant une valeur (vraie ou fausse).", "Si quelqu'un crie « menteur ! », on retourne : le menteur démasqué ramasse le tas, sinon c'est l'accusateur.", "Le premier sans cartes gagne."] },
+  { id: 'j34', nom: 'Construire une cabane', emoji: '🏕️', cat: 'Créatif', lieu: 'partout', ageMin: 4, ageMax: 12, joueurs: '1+', duree: '30 min', materiel: 'Draps, coussins, chaises', but: 'Bâtir un repaire secret.', regles: ["Rassemble draps, coussins, chaises, une table.", "Tends les draps entre les meubles pour faire un toit.", "Aménage l'intérieur : coussins, lampe de poche, livres. C'est leur QG !"] },
+  { id: 'j35', nom: 'Pâte à sel', emoji: '🧂', cat: 'Créatif', lieu: 'int', ageMin: 3, ageMax: 10, joueurs: '1+', duree: '30 min', materiel: 'Farine, sel, eau', but: 'Modeler des objets à faire sécher.', regles: ["Mélange 2 doses de farine, 1 de sel, 1 d'eau jusqu'à une pâte souple.", "Modèle des figurines, colliers, animaux…", "Fais sécher à l'air ou au four à basse température, puis peins."] },
+  { id: 'j36', nom: 'Origami (la cocotte)', emoji: '🦢', cat: 'Créatif', lieu: 'int', ageMin: 6, ageMax: 12, joueurs: '1+', duree: '15 min', materiel: 'Une feuille carrée', but: 'Plier la cocotte à doigts.', regles: ["Plie une feuille carrée en deux diagonales, puis ramène les 4 coins au centre.", "Retourne et ramène encore les 4 coins. Glisse les doigts dessous.", "Écris des gages ou des couleurs dessous : un classique de la récré !"] },
+  { id: 'j37', nom: 'Chasse au trésor', emoji: '🗺️', cat: 'Créatif', lieu: 'partout', ageMin: 5, ageMax: 12, joueurs: '1+', duree: '30 min', materiel: 'Papier (pour les indices)', but: 'Suivre les indices jusqu au trésor.', regles: ["Cache un « trésor » (goûter, petit jouet).", "Prépare une série d'indices qui mènent d'une cachette à la suivante.", "Donne le premier indice : à eux de résoudre la piste jusqu'au bout !"] },
+  { id: 'j38', nom: 'Parcours de motricité', emoji: '🤸', cat: 'Mouvement', lieu: 'int', ageMin: 3, ageMax: 8, joueurs: '1+', duree: '20 min', materiel: 'Coussins, ruban adhésif', but: 'Franchir un parcours sans tomber.', regles: ["Crée un parcours : marcher sur une ligne de scotch, sauter de coussin en coussin, passer sous une chaise…", "Les enfants l'enchaînent comme des ninjas.", "Ajoute des défis : à reculons, à cloche-pied, en chronométrant."] },
+  { id: 'j39', nom: "Théâtre d'ombres", emoji: '🌑', cat: 'Créatif', lieu: 'int', ageMin: 5, ageMax: 12, joueurs: '2+', duree: '20 min', materiel: 'Une lampe + un mur', but: 'Créer des ombres et raconter une histoire.', regles: ["Éteins la lumière, allume une lampe face à un mur blanc.", "Forme des animaux avec les mains (lapin, oiseau, loup…).", "Invente une petite histoire avec les ombres."] },
+  { id: 'j40', nom: 'Le jeu des couleurs', emoji: '🌈', cat: 'Tout-petits', lieu: 'partout', ageMin: 3, ageMax: 6, joueurs: '2+', duree: '10 min', materiel: 'Aucun', but: 'Toucher vite une couleur annoncée.', regles: ["Le meneur crie une couleur : « Rouge ! ».", "Tout le monde court toucher quelque chose de cette couleur.", "Le dernier (ou celui qui ne trouve pas) rejoue ou est éliminé."] },
+  { id: 'j41', nom: 'Imiter les animaux', emoji: '🐘', cat: 'Tout-petits', lieu: 'partout', ageMin: 2, ageMax: 6, joueurs: '1+', duree: '10 min', materiel: 'Aucun', but: 'Bouger et crier comme les animaux.', regles: ["Nomme un animal : « le canard ! ».", "Les petits l'imitent (démarche et cri).", "Enchaîne les animaux de plus en plus vite : fous rires assurés."] },
+  { id: 'j42', nom: 'Le drap qui vole', emoji: '🪂', cat: 'Tout-petits', lieu: 'partout', ageMin: 3, ageMax: 8, joueurs: '3+', duree: '10 min', materiel: 'Un grand drap', but: 'Faire voler le drap tous ensemble.', regles: ["Tout le monde tient les bords d'un grand drap.", "On le soulève très haut ensemble puis on le rabaisse (pose une balle légère dessus à faire sauter).", "Variante : un enfant passe dessous avant que le drap retombe."], variante: "Mettre un ballon de baudruche dessus et le faire rebondir sans le faire tomber." }
+];
+function ageMatch(g, b) { if (b === 'tous') return true; const B = { petits: [3, 5], moyens: [6, 8], grands: [9, 12] }[b]; return g.ageMin <= B[1] && g.ageMax >= B[0]; }
+function lieuMatch(g, l) { if (l === 'tous') return true; return g.lieu === l || g.lieu === 'partout'; }
+function ageBadge(g) { return (g.ageMin <= 5 && g.ageMax >= 10) ? 'Tous âges' : g.ageMin + '-' + g.ageMax + ' ans'; }
+function lieuBadge(g) { return { int: '🏠 Intérieur', ext: '🌳 Extérieur', partout: '🏠🌳 Partout' }[g.lieu]; }
+function jeuxFiltres() { const f = jxSearch.toLowerCase().trim(); return JEUX.filter((g) => ageMatch(g, jxAge) && lieuMatch(g, jxLieu) && (!jxFav || data.favJeux.includes(g.id)) && (!f || g.nom.toLowerCase().includes(f) || g.cat.toLowerCase().includes(f))); }
+function gameRowsHtml() {
+  const list = jeuxFiltres();
+  if (!list.length) return `<div class="empty"><span class="e">🔍</span>Aucun jeu avec ces filtres. Élargis la recherche !</div>`;
+  return list.map((g) => { const fav = data.favJeux.includes(g.id); return `<div class="item recipe" data-jid="${g.id}"><span class="label">${g.emoji} ${esc(g.nom)}<br><span class="muted" style="font-size:12px">${esc(g.cat)} · ${esc(ageBadge(g))}</span></span><button class="rfav" data-jfav="${g.id}">${fav ? '❤️' : '🤍'}</button><span class="go">›</span></div>`; }).join('');
+}
+function renderJeux(el) {
+  const ages = [['tous', 'Tous âges'], ['petits', '3-5 ans'], ['moyens', '6-8 ans'], ['grands', '9 ans +']];
+  const lieux = [['tous', 'Partout'], ['int', '🏠 Intérieur'], ['ext', '🌳 Extérieur']];
+  el.innerHTML = `
+    <button class="btn btn-accent btn-block" id="jx-random" style="margin-bottom:14px">🎲 Propose-moi un jeu au hasard</button>
+    <input class="input" id="jx-search" placeholder="Rechercher un jeu…" autocomplete="off" value="${esc(jxSearch)}" />
+    <div class="chips" style="margin-top:10px">${ages.map((c) => `<button class="chip ${jxAge === c[0] ? 'on' : ''}" data-age="${c[0]}">${c[1]}</button>`).join('')}</div>
+    <div class="chips" style="margin-top:8px">${lieux.map((c) => `<button class="chip ${jxLieu === c[0] ? 'on' : ''}" data-lieu="${c[0]}">${c[1]}</button>`).join('')}<button class="chip ${jxFav ? 'on' : ''}" data-favtoggle>❤️ Favoris</button></div>
+    <p class="muted" style="margin:12px 2px 0">${jeuxFiltres().length} jeu(x) — touche pour voir les règles</p>
+    <div class="list" id="jx-list" style="margin-top:6px">${gameRowsHtml()}</div>`;
+  el.querySelector('#jx-random').addEventListener('click', randomGame);
+  el.querySelector('#jx-search').addEventListener('input', (e) => { jxSearch = e.target.value; el.querySelector('#jx-list').innerHTML = gameRowsHtml(); wireJeux(el); });
+  el.querySelectorAll('[data-age]').forEach((b) => b.addEventListener('click', () => { jxAge = b.dataset.age; renderJeux(el); }));
+  el.querySelectorAll('[data-lieu]').forEach((b) => b.addEventListener('click', () => { jxLieu = b.dataset.lieu; renderJeux(el); }));
+  el.querySelector('[data-favtoggle]').addEventListener('click', () => { jxFav = !jxFav; renderJeux(el); });
+  wireJeux(el);
+}
+function wireJeux(scope) {
+  scope.querySelectorAll('[data-jid]').forEach((row) => { row.addEventListener('click', () => openGameDetail(row.dataset.jid)); const fb = row.querySelector('[data-jfav]'); if (fb) fb.addEventListener('click', (e) => { e.stopPropagation(); toggleFavJeu(row.dataset.jfav); scope.querySelector('#jx-list').innerHTML = gameRowsHtml(); wireJeux(scope); }); });
+}
+function randomGame() { const pool = jeuxFiltres(); if (!pool.length) { toast('Aucun jeu avec ces filtres'); return; } openGameDetail(pool[Math.floor(Math.random() * pool.length)].id); }
+function toggleFavJeu(id) { const i = data.favJeux.indexOf(id); if (i >= 0) data.favJeux.splice(i, 1); else data.favJeux.push(id); save(); }
+function openGameDetail(id) {
+  const g = JEUX.find((x) => x.id === id); if (!g) return;
+  closeOverlay();
+  const fav = data.favJeux.includes(g.id);
+  const badges = [ageBadge(g), lieuBadge(g), '👥 ' + g.joueurs, '⏱️ ' + g.duree, '🎒 ' + g.materiel];
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>${g.emoji} ${esc(g.nom)}</h2></div>
+    <div class="overlay-body">
+      <div class="badges">${badges.map((b) => `<span class="jbadge">${esc(b)}</span>`).join('')}</div>
+      ${g.but ? `<p class="jbut">🎯 ${esc(g.but)}</p>` : ''}
+      <div class="section-title">Comment jouer</div>
+      <div class="card"><ol class="steps">${g.regles.map((s) => `<li>${esc(s)}</li>`).join('')}</ol></div>
+      ${g.variante ? `<div class="section-title">Variante</div><div class="card"><p style="margin:0">${esc(g.variante)}</p></div>` : ''}
+      <div class="btn-row" style="margin-top:6px"><button class="btn" style="flex:1" id="jd-fav">${fav ? '❤️ Favori' : '🤍 Favori'}</button><button class="btn btn-accent" style="flex:1" id="jd-other">🎲 Un autre</button></div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', () => { closeOverlay(); render(); });
+  ov.querySelector('#jd-fav').addEventListener('click', () => { toggleFavJeu(g.id); openGameDetail(g.id); });
+  ov.querySelector('#jd-other').addEventListener('click', randomGame);
 }
 
 /* ---------- Démarrage ---------- */
