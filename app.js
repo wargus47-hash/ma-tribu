@@ -33,7 +33,7 @@ function applyTheme() {
 function todayDow() { return (new Date().getDay() + 6) % 7; }
 function tempsMin(t) { if (!t) return 999; t = String(t).toLowerCase(); let m = 0; const h = t.match(/(\d+)\s*h/); if (h) m += parseInt(h[1], 10) * 60; const mn = t.match(/(\d+)\s*min/); if (mn) m += parseInt(mn[1], 10); if (!h && !mn) { const n = parseInt(t, 10); if (!isNaN(n)) m = n; } return m || 999; }
 const DESSERT_IDS = new Set(['r27', 'r28', 'r45', 'r46', 'r47', 'r48']);
-function seedSante() { const blank = () => ({ allergies: '', traitements: '', medecin: '', groupe: '', notes: [], medicaments: [], mesures: [] }); return { petit: blank(), grand: blank() }; }
+function seedSante() { const blank = () => ({ allergies: '', traitements: '', medecin: '', groupe: '', vetements: '', pointure: '', notes: [], medicaments: [], mesures: [] }); return { petit: blank(), grand: blank() }; }
 function seedRecompenses() { const b = () => ({ etoiles: 0, objectif: 10, recompense: '' }); return { petit: b(), grand: b() }; }
 function soldeCoparent() { let s = 0; data.depenses.forEach((d) => { const part = (+d.montant || 0) / 2; if (d.payePar === 'moi') s += part; else s -= part; }); return s; }
 function nextAnnivInfo(s) {
@@ -157,7 +157,7 @@ function seedRecettes() {
 }
 function seed() {
   return {
-    version: 9,
+    version: 10,
     reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false, theme: 'clair', accent: 'teal', midiSemaine: false, notifs: false, lastNotif: '', consignesSitter: '' },
     courses: [],
     recurrents: [
@@ -207,7 +207,9 @@ function seed() {
     liaison: [],
     vacances: [],
     devoirs: [],
-    recompenses: seedRecompenses()
+    recompenses: seedRecompenses(),
+    pharmacie: seedPharmacie(),
+    menage: seedMenage()
   };
 }
 
@@ -248,13 +250,15 @@ function migrate() {
   data.devoirs = data.devoirs || [];
   if (!data.recompenses) data.recompenses = seedRecompenses(); else { data.recompenses.petit = data.recompenses.petit || seedRecompenses().petit; data.recompenses.grand = data.recompenses.grand || seedRecompenses().grand; }
   if (data.reglages.consignesSitter === undefined) data.reglages.consignesSitter = '';
+  data.pharmacie = data.pharmacie || seedPharmacie();
+  data.menage = data.menage || seedMenage();
   data.listesExtra = data.listesExtra || [];
   if (!data.sante) data.sante = seedSante();
-  ['petit', 'grand'].forEach((c) => { data.sante[c] = data.sante[c] || seedSante().petit; data.sante[c].notes = data.sante[c].notes || []; data.sante[c].medicaments = data.sante[c].medicaments || []; data.sante[c].mesures = data.sante[c].mesures || []; });
+  ['petit', 'grand'].forEach((c) => { data.sante[c] = data.sante[c] || seedSante().petit; data.sante[c].notes = data.sante[c].notes || []; data.sante[c].medicaments = data.sante[c].medicaments || []; data.sante[c].mesures = data.sante[c].mesures || []; if (data.sante[c].vetements === undefined) data.sante[c].vetements = ''; if (data.sante[c].pointure === undefined) data.sante[c].pointure = ''; });
   if (!data.routines) data.routines = s.routines;
   else if (data.routines.matin || data.routines.soir) { const old = data.routines; data.routines = seedRoutines(); data.routines.petit = { matin: old.matin || [], soir: old.soir || [] }; }
   else { data.routines.petit = data.routines.petit || seedRoutines().petit; data.routines.grand = data.routines.grand || seedRoutines().grand; }
-  data.version = 9;
+  data.version = 10;
 }
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) { toast('⚠️ Sauvegarde impossible (mémoire pleine ?)'); } }
 
@@ -392,7 +396,8 @@ function renderAccueil(el) {
   const dc = el.querySelector('#d-cart');
   if (dc) dc.addEventListener('click', () => addRecetteToCourses(ti, 'soir'));
   const av = accueilTodayHtml(); if (av) el.insertAdjacentHTML('beforeend', av);
-  el.insertAdjacentHTML('beforeend', `<div class="section-title">Outils</div><div class="quick"><button id="ac-dep"><span class="e">💶</span>Dépenses partagées</button><button id="ac-sitter"><span class="e">🧑‍🍼</span>Mode baby-sitter</button><button id="ac-idee"><span class="e">💡</span>Idée anti-écran</button></div>`);
+  el.insertAdjacentHTML('beforeend', `<div class="section-title">Outils</div><div class="quick"><button id="ac-guide"><span class="e">📖</span>Guide du parent</button><button id="ac-dep"><span class="e">💶</span>Dépenses partagées</button><button id="ac-sitter"><span class="e">🧑‍🍼</span>Mode baby-sitter</button><button id="ac-idee"><span class="e">💡</span>Idée anti-écran</button></div><div class="card" style="margin-top:14px"><b>💛 Conseil du jour</b><br><span class="muted">${esc(conseilDuJour())}</span></div>`);
+  el.querySelector('#ac-guide').addEventListener('click', openGuide);
   el.querySelector('#ac-dep').addEventListener('click', openDepenses);
   el.querySelector('#ac-sitter').addEventListener('click', openSitter);
   el.querySelector('#ac-idee').addEventListener('click', () => openGameDetail(JEUX[Math.floor(Math.random() * JEUX.length)].id));
@@ -998,6 +1003,7 @@ function openSante(child) {
         <label class="fld">Allergies<textarea class="input" id="sa-allerg" rows="2" placeholder="ex. arachide, pollen…">${esc(s.allergies || '')}</textarea></label>
         <label class="fld">Traitement en cours<textarea class="input" id="sa-trait" rows="2" placeholder="ex. Ventoline si besoin">${esc(s.traitements || '')}</textarea></label>
         <label class="fld">Médecin / pédiatre<input class="input" id="sa-med" value="${esc(s.medecin || '')}" placeholder="Nom + téléphone" /></label>
+        <div class="field-row"><label class="fld" style="flex:1">Taille de vêtements<input class="input" id="sa-vet" value="${esc(s.vetements || '')}" placeholder="ex. 6 ans" /></label><label class="fld" style="flex:1">Pointure<input class="input" id="sa-point" value="${esc(s.pointure || '')}" placeholder="ex. 28" /></label></div>
         <button class="btn btn-primary btn-block" id="sa-save">Enregistrer</button>
       </div>
       <div class="section-title">Vaccins & événements</div>
@@ -1021,7 +1027,7 @@ function openSante(child) {
     </div>`;
   document.body.appendChild(ov);
   ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
-  ov.querySelector('#sa-save').addEventListener('click', () => { s.groupe = ov.querySelector('#sa-groupe').value.trim(); s.allergies = ov.querySelector('#sa-allerg').value.trim(); s.traitements = ov.querySelector('#sa-trait').value.trim(); s.medecin = ov.querySelector('#sa-med').value.trim(); save(); toast('Carnet enregistré ✓'); });
+  ov.querySelector('#sa-save').addEventListener('click', () => { s.groupe = ov.querySelector('#sa-groupe').value.trim(); s.allergies = ov.querySelector('#sa-allerg').value.trim(); s.traitements = ov.querySelector('#sa-trait').value.trim(); s.medecin = ov.querySelector('#sa-med').value.trim(); s.vetements = ov.querySelector('#sa-vet').value.trim(); s.pointure = ov.querySelector('#sa-point').value.trim(); save(); toast('Carnet enregistré ✓'); });
   ov.querySelector('#sn-add').addEventListener('click', () => { const t = ov.querySelector('#sn-txt').value.trim(); if (!t) return; s.notes.push({ id: uid(), texte: t, date: ov.querySelector('#sn-date').value }); save(); openSante(child); });
   ov.querySelectorAll('[data-snid]').forEach((row) => row.querySelector('[data-sndel]').addEventListener('click', () => { s.notes = s.notes.filter((x) => x.id !== row.dataset.snid); save(); openSante(child); }));
   ov.querySelector('#md-add').addEventListener('click', () => { const n = ov.querySelector('#md-nom').value.trim(); if (!n) return; const now = new Date(); const quand = frShort(todayISO()) + ' ' + String(now.getHours()).padStart(2, '0') + 'h' + String(now.getMinutes()).padStart(2, '0'); s.medicaments.push({ id: uid(), nom: n, dose: ov.querySelector('#md-dose').value.trim(), quand }); save(); openSante(child); });
@@ -1371,6 +1377,163 @@ function openGameDetail(id) {
   ov.querySelector('[data-back]').addEventListener('click', () => { closeOverlay(); render(); });
   ov.querySelector('#jd-fav').addEventListener('click', () => { toggleFavJeu(g.id); openGameDetail(g.id); });
   ov.querySelector('#jd-other').addEventListener('click', randomGame);
+}
+
+/* ============================================================
+   v10 : le Guide du parent (savoir-faire, urgences, repères…)
+   ============================================================ */
+const FICHES = [
+  { id: 'f1', nom: 'Faire une machine à laver', emoji: '🧺', etapes: ["Trie le linge : blanc, couleur et foncé séparés.", "Vide les poches et ferme les fermetures éclair.", "Mets la lessive (un bouchon) dans le bac du milieu.", "Programme : 30°C au quotidien, 40°C pour draps/serviettes, 60°C pour les torchons.", "Étends vite après la fin du cycle pour éviter les mauvaises odeurs."] },
+  { id: 'f2', nom: 'Étendre et plier le linge', emoji: '👕', etapes: ["Secoue chaque vêtement avant d'étendre : il y aura moins de plis.", "Suspends les hauts par le bas ou sur cintre.", "Plie une fois sec : t-shirts en trois, pantalons en deux.", "Range debout dans le tiroir : tu vois tout d'un coup d'œil."] },
+  { id: 'f3', nom: 'Enlever une tache', emoji: '🧴', etapes: ["Agis vite et à l'eau FROIDE (le chaud fixe la tache).", "Tache de gras (sauce, beurre) : un peu de liquide vaisselle, frotte doucement.", "Fruits ou herbe : vinaigre blanc ou jus de citron.", "Sang ou chocolat : eau froide et savon, jamais d'eau chaude.", "Lave ensuite le vêtement normalement."] },
+  { id: 'f4', nom: 'Recoudre un bouton', emoji: '🧵', etapes: ["Enfile l'aiguille et fais un nœud au bout du fil.", "Pique de dessous le tissu, à travers un trou du bouton.", "Fais 5 à 6 allers-retours dans les trous du bouton.", "Termine par 2-3 petits points sous le tissu, puis coupe le fil."] },
+  { id: 'f5', nom: 'Le ménage essentiel', emoji: '🧹', etapes: ["Range d'abord (ramasse ce qui traîne).", "Fais la poussière du haut vers le bas.", "Aspire ou balaie, puis passe la serpillière sur les sols durs.", "Cuisine et WC : une lingette désinfectante régulièrement.", "Astuce : 15 min par jour valent mieux qu'une grosse corvée le week-end."] },
+  { id: 'f6', nom: 'Déboucher un évier', emoji: '🚰', etapes: ["Retire les déchets visibles à la main.", "Verse de l'eau bouillante dans le trou.", "Si ça résiste : bicarbonate + vinaigre blanc, attends 15 min, rince à l'eau chaude.", "Sinon une ventouse. En dernier recours, un furet."] },
+  { id: 'f7', nom: 'Cuire pâtes et riz', emoji: '🍝', etapes: ["Pâtes : grande casserole d'eau bouillante salée, 8 à 11 min (voir paquet), puis égoutte.", "Riz : 1 volume de riz pour 2 d'eau salée, couvre, feu doux 10-12 min jusqu'à absorption.", "Quantité : environ 80 g de cru par adulte, 50 g par enfant."] },
+  { id: 'f8', nom: 'Cuire un œuf', emoji: '🥚', etapes: ["À la coque : 3 min dans l'eau bouillante.", "Mollet : 6 min. Dur : 9 à 10 min.", "Au plat : à la poêle avec un peu d'huile, 2 à 3 min.", "Plonge les œufs durs dans l'eau froide : ils s'écalent plus facilement."] },
+  { id: 'f9', nom: 'Repasser sans stress', emoji: '🔥', etapes: ["Repasse le linge légèrement humide, ou avec la vapeur.", "Température : chaud pour le coton, doux pour le synthétique (vérifie l'étiquette).", "Commence par les cols et les manches.", "Astuce : plie le linge dès la sortie de machine, beaucoup n'auront pas besoin de repassage."] },
+  { id: 'f10', nom: 'Gérer les poubelles & le tri', emoji: '♻️', etapes: ["Bac jaune : emballages, plastiques, cartons, métal.", "Verre : dans le conteneur à part.", "Ordures ménagères : tout le reste.", "Sors les poubelles la veille du ramassage (note le jour dans tes rappels)."] }
+];
+const URGENCES = [
+  { emoji: '🌡️', titre: 'Fièvre', conseils: ["Découvre l'enfant, fais-le boire souvent, aère la pièce.", "Tu peux donner du paracétamol selon son poids (lis bien la notice).", "Appelle le médecin si la fièvre dure plus de 48h, si l'enfant a moins de 3 mois, ou s'il est très abattu."] },
+  { emoji: '🤕', titre: 'Chute ou bosse', conseils: ["Applique du froid (poche de glace dans un linge) 10 min.", "Surveille l'enfant dans les heures qui suivent.", "Appelle le 15 en cas de perte de connaissance, vomissements répétés ou comportement anormal."] },
+  { emoji: '🤢', titre: 'Vomissements / diarrhée', conseils: ["Fais boire par petites gorgées, souvent (eau, solution de réhydratation).", "Reprends l'alimentation doucement : riz, banane, compote.", "Consulte si ça dure plus de 24-48h, s'il y a du sang, ou des signes de déshydratation (plus de pipi, grande fatigue)."] },
+  { emoji: '🩸', titre: 'Coupure / saignement', conseils: ["Nettoie à l'eau et au savon, désinfecte, mets un pansement.", "Comprime 5 à 10 min si ça saigne.", "Consulte si la plaie est profonde, qu'elle bâille, ou qu'elle est très sale."] },
+  { emoji: '🔥', titre: 'Brûlure légère', conseils: ["Passe sous l'eau froide pendant 15 min, tout de suite.", "Ne perce pas les cloques, couvre d'un linge propre.", "Appelle le 15 si la brûlure est étendue, au visage, ou avec de grosses cloques."] },
+  { emoji: '😮‍💨', titre: 'Étouffement', conseils: ["S'il tousse, laisse-le tousser, n'interviens pas.", "S'il ne peut plus respirer ni parler : 5 tapes dans le dos, puis compressions (méthode adaptée à son âge).", "Fais appeler le 15 ou le 112 IMMÉDIATEMENT."] },
+  { emoji: '🐝', titre: 'Réaction allergique', conseils: ["Simples rougeurs ou démangeaisons : surveille.", "Gonflement du visage/lèvres ou difficulté à respirer : appelle le 15 IMMÉDIATEMENT.", "Si un traitement d'urgence a été prescrit (stylo auto-injecteur), utilise-le."] }
+];
+const REPERES = [
+  { titre: '3 à 5 ans', emoji: '🧒', lignes: [["😴 Sommeil", "10 à 13h par nuit, parfois encore une sieste. Coucher régulier vers 20h."], ["📱 Écrans", "Le moins possible (max ~30 min/jour). Jamais le matin, pendant les repas, ni avant le coucher."], ["🍽️ Repas", "4 temps (matin, midi, goûter, soir). Petites portions : il régule son appétit, ne le force pas."], ["🧦 Autonomie", "S'habiller avec un peu d'aide, ranger ses jouets, mettre la table, se laver les mains."]] },
+  { titre: '6 à 11 ans', emoji: '🧑', lignes: [["😴 Sommeil", "9 à 11h par nuit. Coucher régulier, pas d'écran dans la chambre le soir."], ["📱 Écrans", "Environ 1h/jour en semaine, contenu adapté à l'âge, dans une pièce commune."], ["🍽️ Repas", "3 repas + un goûter, variés. Implique-le dans la cuisine."], ["🎒 Autonomie", "Se laver seul, faire ses devoirs, préparer son cartable, aider aux tâches (table, tri du linge)."]] }
+];
+const RITUELS = [
+  ["🌹", "Le rose & épine", "Au dîner, chacun raconte son meilleur moment (rose) et son moins bon (épine) de la journée."],
+  ["📖", "L'histoire du soir", "Un livre, blotti dans le lit : le rituel anti-cauchemar, plein de câlins."],
+  ["💌", "Le petit mot", "Glisse un mot doux dans le cartable ou la boîte à goûter."],
+  ["🍕", "Vendredi pizza-film", "Une soirée détente attendue toute la semaine."],
+  ["👨‍🍳", "On cuisine ensemble", "Le week-end, ils choisissent et préparent un plat avec toi."],
+  ["🗣️", "Le conseil de famille", "15 min par semaine pour décider ensemble (sorties, règles, petits soucis)."],
+  ["🎲", "Le moment rien qu'à nous", "Un jeu tous les trois, sans écran ni téléphone."],
+  ["🌅", "Le réveil tout doux", "5 min de câlin avant de se lever : la journée démarre mieux."]
+];
+const CONSEILS = [
+  "Fait, c'est mieux que parfait. Tes enfants veulent un papa présent, pas parfait.",
+  "Prépare les affaires du lendemain le soir : le matin sera bien plus calme.",
+  "Mange à heure fixe : les enfants sont rassurés par les repères.",
+  "Accepte le désordre parfois. Le lien passe avant le rangement.",
+  "Un repas simple + un câlin valent mieux qu'un grand plat dans l'énervement.",
+  "Prends 10 min pour toi quand ils dorment. Tu n'es utile que reposé.",
+  "Une chose à la fois. Tu n'es pas obligé de tout réussir aujourd'hui.",
+  "Demande de l'aide : famille, amis, autres parents. Ce n'est pas un échec.",
+  "Félicite-toi d'une chose chaque soir. Tu fais déjà énormément.",
+  "Écoute avant de réagir : « raconte-moi » désamorce bien des crises.",
+  "Garde le même rythme dans tes deux semaines : repas, coucher, règles.",
+  "Le batch cooking du dimanche te sauve toute la semaine.",
+  "Range 5 min avec eux comme un jeu : à qui ramasse le plus vite !",
+  "Une routine affichée évite de répéter dix fois la même chose.",
+  "En cas de crise, respire. Ton calme calme l'enfant."
+];
+const SAISONS = {
+  'Rentrée scolaire': ['Cartable', 'Trousse', 'Cahiers', 'Stylos & crayons', 'Règle, gomme, taille-crayon', 'Agenda', 'Tenue de sport', 'Chaussons', 'Étiquettes au nom', 'Certificat médical / assurance'],
+  'Été': ['Maillots de bain', 'Crème solaire', 'Casquettes', 'Lunettes de soleil', 'Sandales', 'Brassards', 'Anti-moustiques', 'Gourdes'],
+  'Hiver': ['Manteaux chauds', 'Bonnets, gants, écharpes', 'Bottes', 'Pulls', 'Collants', 'Baume à lèvres']
+};
+function seedPharmacie() { return ['Thermomètre', 'Paracétamol enfant (sirop)', 'Pansements', 'Désinfectant / antiseptique', 'Sérum physiologique', 'Compresses stériles', 'Sparadrap', 'Pince à épiler', 'Crème pour brûlures', 'Crème anti-piqûres', 'Solution de réhydratation (SRO)', 'Paracétamol adulte'].map((n) => ({ id: uid(), nom: n, fait: false })); }
+function seedMenage() { return [["Vaisselle / lave-vaisselle", "Tous les jours"], ["Sortir les poubelles", "1×/semaine"], ["Lessive", "2×/semaine"], ["Passer l'aspirateur", "1×/semaine"], ["Salle de bain & WC", "1×/semaine"], ["Changer les draps", "Toutes les 2 sem."], ["Ranger les chambres", "1×/semaine"], ["Nettoyer le frigo", "1×/mois"]].map(([t, f]) => ({ id: uid(), texte: t, freq: f, fait: false })); }
+function conseilDuJour() { const start = new Date(new Date().getFullYear(), 0, 0); const day = Math.floor((new Date() - start) / 86400000); return CONSEILS[day % CONSEILS.length]; }
+
+function openGuide() {
+  closeOverlay();
+  const items = [['🧰 Fiches pratiques maison', 'openFiches'], ['🧹 Planning ménage', 'openMenage'], ['🩹 En cas de pépin', 'openUrgences'], ['💊 Trousse à pharmacie', 'openTrousse'], ['🧭 Repères par âge', 'openReperes'], ['💛 Rituels & conseils', 'openRituels'], ['📋 Checklists de saison', 'openSaison']];
+  const map = { openFiches, openMenage, openUrgences, openTrousse, openReperes, openRituels, openSaison };
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>📖 Le guide du parent</h2></div>
+    <div class="overlay-body"><p class="muted" style="margin:0 2px 12px">Tout ce que personne ne t'a expliqué, réuni ici. Tu gères déjà très bien 💪</p>
+    <div class="list">${items.map(([lbl, fn]) => `<div class="item recipe" data-g="${fn}"><span class="label">${lbl}</span><span class="go">›</span></div>`).join('')}</div></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
+  ov.querySelectorAll('[data-g]').forEach((b) => b.addEventListener('click', () => map[b.dataset.g]()));
+}
+function openFiches() {
+  closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>🧰 Fiches pratiques</h2></div><div class="overlay-body"><div class="card"><div class="list">${FICHES.map((f) => `<div class="item recipe" data-fid="${f.id}"><span class="label">${f.emoji} ${esc(f.nom)}</span><span class="go">›</span></div>`).join('')}</div></div></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', openGuide);
+  ov.querySelectorAll('[data-fid]').forEach((r) => r.addEventListener('click', () => ficheDetail(r.dataset.fid)));
+}
+function ficheDetail(id) {
+  const f = FICHES.find((x) => x.id === id); if (!f) return; closeOverlay();
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>${f.emoji} ${esc(f.nom)}</h2></div><div class="overlay-body"><div class="card"><ol class="steps">${f.etapes.map((s) => `<li>${esc(s)}</li>`).join('')}</ol></div></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', openFiches);
+}
+function openMenage() {
+  closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>🧹 Planning ménage</h2></div><div class="overlay-body">
+    <p class="muted" style="margin:0 2px 10px">Coche au fur et à mesure. 15 min par jour suffisent !</p>
+    <div class="card"><div class="list">${data.menage.map((t) => `<div class="item ${t.fait ? 'done' : ''}" data-mnid="${t.id}"><span class="check">${t.fait ? '✓' : ''}</span><span class="label">${esc(t.texte)}</span><span class="tag">${esc(t.freq)}</span><button class="x" data-act="del">✕</button></div>`).join('')}</div>
+    <div class="field-row" style="margin-top:12px"><input class="input" id="mn-txt" placeholder="Ajouter une tâche…" /><input class="input" id="mn-freq" placeholder="Fréquence" style="flex:0 0 36%" /></div>
+    <div class="btn-row"><button class="btn btn-mini" id="mn-add">Ajouter</button><button class="btn btn-mini btn-primary" id="mn-reset">↻ Tout décocher</button></div></div></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', openGuide);
+  ov.querySelectorAll('[data-mnid]').forEach((row) => { const id = row.dataset.mnid; wireRow(row, () => { const t = data.menage.find((x) => x.id === id); t.fait = !t.fait; save(); openMenage(); }, () => { data.menage = data.menage.filter((x) => x.id !== id); save(); openMenage(); }); });
+  ov.querySelector('#mn-add').addEventListener('click', () => { const t = ov.querySelector('#mn-txt').value.trim(); if (!t) return; data.menage.push({ id: uid(), texte: t, freq: ov.querySelector('#mn-freq').value.trim() || '1×/semaine', fait: false }); save(); openMenage(); });
+  ov.querySelector('#mn-reset').addEventListener('click', () => { data.menage.forEach((t) => t.fait = false); save(); openMenage(); });
+}
+function openUrgences() {
+  closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>🩹 En cas de pépin</h2></div><div class="overlay-body">
+    <div class="card"><h2>📞 Numéros d'urgence</h2><div class="list">
+      <div class="item"><span class="label"><b>SAMU</b> — urgence médicale</span><a class="tel-link" href="tel:15">📞 15</a></div>
+      <div class="item"><span class="label"><b>Urgences (Europe)</b></span><a class="tel-link" href="tel:112">📞 112</a></div>
+      <div class="item"><span class="label"><b>Pompiers</b></span><a class="tel-link" href="tel:18">📞 18</a></div>
+      <div class="item"><span class="label"><b>Centre antipoison</b></span><a class="tel-link" href="tel:0145425900">📞 01 45 42 59 00</a></div>
+    </div></div>
+    <p class="jbut">⚠️ En cas de doute, de difficulté à respirer ou de perte de connaissance : appelle le 15 sans hésiter.</p>
+    ${URGENCES.map((u) => `<div class="section-title">${u.emoji} ${esc(u.titre)}</div><div class="card"><ul class="steps">${u.conseils.map((c) => `<li>${esc(c)}</li>`).join('')}</ul></div>`).join('')}
+    <p class="muted" style="text-align:center;font-size:12px">Conseils généraux de bon sens — ils ne remplacent pas l'avis d'un médecin.</p></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', openGuide);
+}
+function openTrousse() {
+  closeOverlay(); const manque = data.pharmacie.filter((x) => !x.fait).length;
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>💊 Trousse à pharmacie</h2></div><div class="overlay-body">
+    <p class="muted" style="margin:0 2px 10px">Coche ce que tu as déjà. ${manque ? 'Il te manque ' + manque + ' chose(s).' : 'Ta trousse est complète ✓'}</p>
+    <div class="card"><div class="list">${data.pharmacie.map((x) => `<div class="item ${x.fait ? 'done' : ''}" data-phid="${x.id}"><span class="check">${x.fait ? '✓' : ''}</span><span class="label">${esc(x.nom)}</span><button class="x" data-act="del">✕</button></div>`).join('')}</div>
+    <div class="field-row" style="margin-top:12px"><input class="input" id="ph-txt" placeholder="Ajouter…" /><button class="btn btn-primary" id="ph-add">＋</button></div>
+    <button class="btn btn-mini btn-block" id="ph-courses">🛒 Mettre ce qui manque dans une liste « Pharmacie »</button></div></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', openGuide);
+  ov.querySelectorAll('[data-phid]').forEach((row) => { const id = row.dataset.phid; wireRow(row, () => { const x = data.pharmacie.find((y) => y.id === id); x.fait = !x.fait; save(); openTrousse(); }, () => { data.pharmacie = data.pharmacie.filter((y) => y.id !== id); save(); openTrousse(); }); });
+  ov.querySelector('#ph-add').addEventListener('click', () => { const t = ov.querySelector('#ph-txt').value.trim(); if (!t) return; data.pharmacie.push({ id: uid(), nom: t, fait: false }); save(); openTrousse(); });
+  ov.querySelector('#ph-courses').addEventListener('click', () => { let l = data.listesExtra.find((x) => x.nom.toLowerCase() === 'pharmacie'); if (!l) { l = { id: uid(), nom: 'Pharmacie', items: [] }; data.listesExtra.push(l); } let n = 0; data.pharmacie.filter((x) => !x.fait).forEach((x) => { if (!l.items.some((i) => i.nom.toLowerCase() === x.nom.toLowerCase() && !i.fait)) { l.items.push({ id: uid(), nom: x.nom, fait: false }); n++; } }); save(); toast(n ? n + ' article(s) → liste « Pharmacie »' : 'Rien à ajouter'); });
+}
+function openReperes() {
+  closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>🧭 Repères par âge</h2></div><div class="overlay-body">
+    ${REPERES.map((r) => `<div class="section-title">${r.emoji} ${esc(r.titre)}</div><div class="card">${r.lignes.map(([t, d]) => `<p style="margin:0 0 10px"><b>${esc(t)}</b><br>${esc(d)}</p>`).join('')}</div>`).join('')}
+    <p class="muted" style="text-align:center;font-size:12px">Repères généraux : chaque enfant a son rythme. Fie-toi aussi à ton ressenti.</p></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', openGuide);
+}
+function openRituels() {
+  closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>💛 Rituels & conseils</h2></div><div class="overlay-body">
+    <div class="jbut">💡 ${esc(conseilDuJour())}</div>
+    <div class="section-title">Des rituels simples pour créer du lien</div>
+    <div class="card"><div class="list">${RITUELS.map(([e, t, d]) => `<div class="item"><span class="label">${e} <b>${esc(t)}</b><br><span class="muted" style="font-size:13px">${esc(d)}</span></span></div>`).join('')}</div></div></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', openGuide);
+}
+function openSaison() {
+  closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>📋 Checklists de saison</h2></div><div class="overlay-body"><p class="muted" style="margin:0 2px 12px">Crée une liste prête à cocher (elle apparaîtra dans l'onglet Courses).</p>${Object.keys(SAISONS).map((k) => `<button class="btn btn-block" style="margin-bottom:10px" data-saison="${esc(k)}">📋 Créer la liste « ${esc(k)} » (${SAISONS[k].length})</button>`).join('')}</div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', openGuide);
+  ov.querySelectorAll('[data-saison]').forEach((b) => b.addEventListener('click', () => { const k = b.dataset.saison; const l = { id: uid(), nom: k, items: SAISONS[k].map((n) => ({ id: uid(), nom: n, fait: false })) }; data.listesExtra.push(l); activeListe = l.id; save(); closeOverlay(); setTab('courses'); toast('Liste « ' + k + ' » créée ✓'); }));
 }
 
 /* ---------- Démarrage ---------- */
