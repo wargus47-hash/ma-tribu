@@ -219,3 +219,12 @@ button, .item[data-id], .item[data-rid], .item[data-nid], .stat, .quick button, 
 .welcome{background:linear-gradient(135deg,#ffffff,#eef8f5); border:1px solid #cfe9e4; border-radius:var(--radius); padding:16px; margin-bottom:14px; box-shadow:var(--shadow)}
 .welcome h2{margin:0 0 4px; font-size:17px}
 .welcome ol{margin:8px 0 14px; padding-left:20px; font-size:14px; line-height:1.7}
+
+/* ===== Livre de recettes (v5) ===== */
+.rec-group{margin-bottom:4px}
+.rec-group .rayon-title{margin-top:8px}
+.recipe-meta{display:flex; gap:16px; margin:2px 2px 8px; color:var(--muted); font-size:14px; font-weight:600}
+.steps{margin:0; padding-left:22px; line-height:1.55}
+.steps li{margin-bottom:9px}
+.steps li:last-child{margin-bottom:0}
+.rinfo{background:none; border:0; color:var(--muted); font-size:18px; cursor:pointer; padding:2px 8px; flex:0 0 auto}

@@ -57,32 +57,65 @@ function seedRoutines() {
 }
 function seedRecettes() {
   return [
-    { id: 'r1', nom: 'Pâtes bolognaise', emoji: '🍝', ing: [['Pâtes','Épicerie salée'],['Viande hachée','Viande & Poisson'],['Sauce tomate','Épicerie salée'],['Oignon','Fruits & Légumes']] },
-    { id: 'r2', nom: 'Poulet rôti & purée', emoji: '🍗', ing: [['Poulet','Viande & Poisson'],['Pommes de terre','Fruits & Légumes'],['Beurre','Frais'],['Lait','Frais']] },
-    { id: 'r3', nom: 'Coquillettes jambon', emoji: '🧀', ing: [['Coquillettes','Épicerie salée'],['Jambon','Frais'],['Gruyère râpé','Frais'],['Crème fraîche','Frais']] },
-    { id: 'r4', nom: 'Steak & haricots verts', emoji: '🥩', ing: [['Steak haché','Viande & Poisson'],['Haricots verts','Surgelés'],['Pommes de terre','Fruits & Légumes']] },
-    { id: 'r5', nom: 'Omelette & salade', emoji: '🍳', ing: [['Œufs','Frais'],['Salade','Fruits & Légumes'],['Pain','Petit-déj']] },
-    { id: 'r6', nom: 'Poisson pané & riz', emoji: '🐟', ing: [['Poisson pané','Surgelés'],['Riz','Épicerie salée'],['Citron','Fruits & Légumes']] },
-    { id: 'r7', nom: 'Croque & soupe', emoji: '🥪', ing: [['Pain de mie','Petit-déj'],['Jambon','Frais'],['Gruyère râpé','Frais'],['Soupe','Épicerie salée']] },
-    { id: 'r8', nom: 'Quiche & salade', emoji: '🥧', ing: [['Pâte brisée','Frais'],['Œufs','Frais'],['Lardons','Frais'],['Crème fraîche','Frais'],['Salade','Fruits & Légumes']] },
-    { id: 'r9', nom: 'Riz cantonais', emoji: '🍚', ing: [['Riz','Épicerie salée'],['Petits pois','Surgelés'],['Œufs','Frais'],['Jambon','Frais']] },
-    { id: 'r10', nom: 'Hachis parmentier', emoji: '🥔', ing: [['Viande hachée','Viande & Poisson'],['Pommes de terre','Fruits & Légumes'],['Beurre','Frais'],['Lait','Frais']] },
-    { id: 'r11', nom: 'Pizza', emoji: '🍕', ing: [['Pâte à pizza','Frais'],['Sauce tomate','Épicerie salée'],['Fromage râpé','Frais']] },
-    { id: 'r12', nom: 'Tomates farcies', emoji: '🍅', ing: [['Tomates','Fruits & Légumes'],['Viande hachée','Viande & Poisson'],['Riz','Épicerie salée']] }
+    { id: "r1", nom: "Pâtes bolognaise", emoji: "🍝", temps: "30 min", portions: "4 pers.", ing: [["Pâtes","Épicerie salée"],["Viande hachée","Viande & Poisson"],["Sauce tomate","Épicerie salée"],["Oignon","Fruits & Légumes"],["Gruyère râpé","Frais"]], etapes: ["Émince l'oignon et fais-le revenir dans un filet d'huile.","Ajoute la viande hachée et fais-la dorer en l'émiettant.","Verse la sauce tomate, sale, poivre, laisse mijoter 15 min.","Cuis les pâtes dans l'eau bouillante salée (voir paquet).","Égoutte, mélange à la sauce et sers avec le gruyère."] },
+    { id: "r2", nom: "Poulet rôti & purée", emoji: "🍗", temps: "1 h", portions: "4 pers.", ing: [["Poulet","Viande & Poisson"],["Pommes de terre","Fruits & Légumes"],["Beurre","Frais"],["Lait","Frais"]], etapes: ["Préchauffe le four à 200°C. Pose le poulet dans un plat, sale, poivre, un peu de beurre dessus.","Enfourne environ 50 min en arrosant à mi-cuisson avec le jus.","Épluche et coupe les pommes de terre, cuis-les 20 min à l'eau salée.","Écrase-les avec du beurre et un peu de lait chaud.","Découpe le poulet et sers avec la purée."] },
+    { id: "r3", nom: "Gratin de coquillettes au jambon", emoji: "🧀", temps: "30 min", portions: "4 pers.", ing: [["Coquillettes","Épicerie salée"],["Jambon","Frais"],["Gruyère râpé","Frais"],["Crème fraîche","Frais"],["Lait","Frais"]], etapes: ["Préchauffe le four à 200°C. Cuis les coquillettes un peu moins que le temps indiqué.","Coupe le jambon en dés.","Mélange pâtes, jambon, crème, un peu de lait, sel et poivre.","Verse dans un plat, couvre de gruyère et gratine 15 min."] },
+    { id: "r4", nom: "Steak haché & haricots verts", emoji: "🥩", temps: "25 min", portions: "4 pers.", ing: [["Steak haché","Viande & Poisson"],["Haricots verts","Surgelés"],["Pommes de terre","Fruits & Légumes"],["Beurre","Frais"]], etapes: ["Cuis les pommes de terre 20 min à l'eau, écrase-les en purée avec du beurre.","Fais cuire les haricots verts (eau bouillante ou poêle).","Poêle les steaks 2 à 3 min par face selon ta cuisson, sale et poivre.","Sers le tout ensemble."] },
+    { id: "r5", nom: "Omelette & salade", emoji: "🍳", temps: "15 min", portions: "4 pers.", ing: [["Œufs","Frais"],["Salade","Fruits & Légumes"],["Pain","Petit-déj"],["Gruyère râpé","Frais"]], etapes: ["Bats les œufs avec sel, poivre et un peu de gruyère.","Verse dans une poêle chaude beurrée, laisse prendre à feu moyen.","Plie l'omelette et sers avec la salade assaisonnée et du pain."] },
+    { id: "r6", nom: "Poisson pané & riz", emoji: "🐟", temps: "20 min", portions: "4 pers.", ing: [["Poisson pané","Surgelés"],["Riz","Épicerie salée"],["Citron","Fruits & Légumes"]], etapes: ["Cuis le riz dans deux fois son volume d'eau salée.","Fais cuire le poisson pané à la poêle ou au four (voir paquet).","Sers avec le riz et un quartier de citron."] },
+    { id: "r7", nom: "Croque-monsieur & soupe", emoji: "🥪", temps: "20 min", portions: "4 pers.", ing: [["Pain de mie","Petit-déj"],["Jambon","Frais"],["Gruyère râpé","Frais"],["Soupe","Épicerie salée"],["Beurre","Frais"]], etapes: ["Garnis deux tranches de pain de mie de jambon et de gruyère.","Beurre l'extérieur et dore à la poêle des deux côtés.","Réchauffe la soupe et sers ensemble."] },
+    { id: "r8", nom: "Quiche lorraine & salade", emoji: "🥧", temps: "45 min", portions: "4 pers.", ing: [["Pâte brisée","Frais"],["Œufs","Frais"],["Lardons","Frais"],["Crème fraîche","Frais"],["Salade","Fruits & Légumes"]], etapes: ["Préchauffe à 200°C. Étale la pâte dans un moule et pique le fond.","Fais revenir les lardons. Bats les œufs avec la crème, sel et poivre.","Répartis les lardons sur la pâte et verse l'appareil.","Cuis 30 min. Sers avec la salade."] },
+    { id: "r9", nom: "Riz cantonais", emoji: "🍚", temps: "25 min", portions: "4 pers.", ing: [["Riz","Épicerie salée"],["Petits pois","Surgelés"],["Œufs","Frais"],["Jambon","Frais"],["Oignon","Fruits & Légumes"]], etapes: ["Cuis le riz et laisse-le tiédir. Cuis les petits pois.","Fais une omelette fine et coupe-la en lanières. Coupe le jambon en dés.","Fais sauter le tout à la poêle avec le riz et un peu de sauce soja si tu en as."] },
+    { id: "r10", nom: "Hachis parmentier", emoji: "🥔", temps: "45 min", portions: "4 pers.", ing: [["Viande hachée","Viande & Poisson"],["Pommes de terre","Fruits & Légumes"],["Oignon","Fruits & Légumes"],["Beurre","Frais"],["Lait","Frais"],["Gruyère râpé","Frais"]], etapes: ["Cuis les pommes de terre et écrase-les en purée (beurre + lait).","Fais revenir l'oignon puis la viande hachée, sale et poivre.","Dans un plat : viande au fond, purée dessus, gruyère.","Gratine 15 min à 200°C."] },
+    { id: "r11", nom: "Pizza maison", emoji: "🍕", temps: "25 min", portions: "4 pers.", ing: [["Pâte à pizza","Frais"],["Sauce tomate","Épicerie salée"],["Fromage râpé","Frais"],["Jambon","Frais"]], etapes: ["Préchauffe à 240°C et étale la pâte.","Étale la sauce tomate, ajoute le jambon et le fromage.","Cuis 12 à 15 min jusqu'à ce que les bords soient dorés."] },
+    { id: "r12", nom: "Tomates farcies & riz", emoji: "🍅", temps: "50 min", portions: "4 pers.", ing: [["Tomates","Fruits & Légumes"],["Viande hachée","Viande & Poisson"],["Oignon","Fruits & Légumes"],["Riz","Épicerie salée"]], etapes: ["Préchauffe à 200°C. Creuse les tomates en gardant les chapeaux.","Mélange viande, oignon haché, sel et poivre, puis farcis les tomates.","Pose-les dans un plat et enfourne 35 à 40 min.","Sers avec du riz."] },
+    { id: "r13", nom: "Pâtes carbonara", emoji: "🍝", temps: "20 min", portions: "4 pers.", ing: [["Pâtes","Épicerie salée"],["Lardons","Frais"],["Œufs","Frais"],["Crème fraîche","Frais"],["Gruyère râpé","Frais"]], etapes: ["Cuis les pâtes. Fais dorer les lardons à la poêle.","Bats les œufs avec la crème et le gruyère, sel et poivre.","Égoutte les pâtes, mélange hors du feu avec les lardons puis l'appareil aux œufs (la chaleur cuit la sauce)."] },
+    { id: "r14", nom: "Lasagnes", emoji: "🍝", temps: "1 h", portions: "4 pers.", ing: [["Plaques de lasagnes","Épicerie salée"],["Viande hachée","Viande & Poisson"],["Sauce tomate","Épicerie salée"],["Béchamel","Frais"],["Fromage râpé","Frais"],["Oignon","Fruits & Légumes"]], etapes: ["Prépare une bolognaise : oignon + viande + sauce tomate, 15 min.","Dans un plat, alterne sauce, plaques et béchamel jusqu'en haut.","Termine par de la béchamel et du fromage.","Cuis 30 à 35 min à 200°C."] },
+    { id: "r15", nom: "Gratin de chou-fleur", emoji: "🥦", temps: "40 min", portions: "4 pers.", ing: [["Chou-fleur","Fruits & Légumes"],["Béchamel","Frais"],["Gruyère râpé","Frais"],["Jambon","Frais"]], etapes: ["Cuis le chou-fleur en bouquets 15 min à l'eau salée.","Mets-le dans un plat avec le jambon en dés et nappe de béchamel.","Couvre de gruyère et gratine 20 min à 200°C."] },
+    { id: "r16", nom: "Nuggets de poulet maison & frites", emoji: "🍗", temps: "35 min", portions: "4 pers.", ing: [["Filets de poulet","Viande & Poisson"],["Chapelure","Épicerie salée"],["Œufs","Frais"],["Farine","Épicerie salée"],["Frites","Surgelés"]], etapes: ["Coupe le poulet en morceaux. Passe-les dans la farine, l'œuf battu puis la chapelure.","Cuis au four 20 min à 200°C (ou à la poêle) en retournant.","Cuis les frites au four et sers."] },
+    { id: "r17", nom: "Boulettes sauce tomate", emoji: "🍖", temps: "35 min", portions: "4 pers.", ing: [["Viande hachée","Viande & Poisson"],["Œufs","Frais"],["Chapelure","Épicerie salée"],["Sauce tomate","Épicerie salée"],["Pâtes","Épicerie salée"]], etapes: ["Mélange viande, 1 œuf, un peu de chapelure, sel et poivre. Forme des boulettes.","Dore-les à la poêle puis ajoute la sauce tomate et laisse mijoter 15 min.","Sers avec des pâtes."] },
+    { id: "r18", nom: "Saucisses & purée", emoji: "🌭", temps: "25 min", portions: "4 pers.", ing: [["Saucisses","Viande & Poisson"],["Pommes de terre","Fruits & Légumes"],["Beurre","Frais"],["Lait","Frais"]], etapes: ["Cuis les pommes de terre et écrase-les en purée (beurre + lait).","Fais griller les saucisses à la poêle.","Sers ensemble."] },
+    { id: "r19", nom: "Saumon en papillote & riz", emoji: "🐟", temps: "30 min", portions: "4 pers.", ing: [["Pavé de saumon","Viande & Poisson"],["Riz","Épicerie salée"],["Citron","Fruits & Légumes"],["Crème fraîche","Frais"]], etapes: ["Préchauffe à 200°C. Pose chaque pavé sur un papier cuisson avec citron, sel et un peu de crème.","Ferme les papillotes et enfourne 15 à 18 min.","Cuis le riz et sers."] },
+    { id: "r20", nom: "Gratin dauphinois", emoji: "🥔", temps: "1 h", portions: "4 pers.", ing: [["Pommes de terre","Fruits & Légumes"],["Crème fraîche","Frais"],["Lait","Frais"],["Ail","Fruits & Légumes"],["Gruyère râpé","Frais"]], etapes: ["Préchauffe à 180°C. Coupe les pommes de terre en fines rondelles.","Dispose-les dans un plat frotté à l'ail, sale et poivre.","Mélange crème et lait, verse dessus, couvre de gruyère.","Cuis 45 min jusqu'à ce que ce soit fondant et doré."] },
+    { id: "r21", nom: "Soupe de légumes", emoji: "🥕", temps: "35 min", portions: "4 pers.", ing: [["Carottes","Fruits & Légumes"],["Pommes de terre","Fruits & Légumes"],["Poireaux","Fruits & Légumes"],["Oignon","Fruits & Légumes"]], etapes: ["Épluche et coupe tous les légumes en morceaux.","Couvre d'eau, sale et cuis 25 min.","Mixe et ajoute une noix de beurre ou un peu de crème."] },
+    { id: "r22", nom: "Ratatouille & riz", emoji: "🍆", temps: "45 min", portions: "4 pers.", ing: [["Courgettes","Fruits & Légumes"],["Aubergine","Fruits & Légumes"],["Poivrons","Fruits & Légumes"],["Tomates","Fruits & Légumes"],["Oignon","Fruits & Légumes"],["Riz","Épicerie salée"]], etapes: ["Coupe tous les légumes en cubes.","Fais revenir l'oignon, ajoute le reste, sel, poivre et herbes.","Laisse mijoter 30 min à couvert. Sers avec du riz."] },
+    { id: "r23", nom: "Tartiflette", emoji: "🧀", temps: "50 min", portions: "4 pers.", ing: [["Pommes de terre","Fruits & Légumes"],["Reblochon","Frais"],["Lardons","Frais"],["Oignon","Fruits & Légumes"],["Crème fraîche","Frais"]], etapes: ["Cuis les pommes de terre 20 min et coupe-les en rondelles.","Fais revenir l'oignon et les lardons.","Dans un plat : pommes de terre, lardons, un peu de crème, reblochon coupé en deux dessus.","Cuis 25 min à 200°C."] },
+    { id: "r24", nom: "Cordon bleu & haricots verts", emoji: "🍗", temps: "20 min", portions: "4 pers.", ing: [["Cordons bleus","Frais"],["Haricots verts","Surgelés"],["Pommes de terre","Fruits & Légumes"]], etapes: ["Cuis les cordons bleus à la poêle (voir paquet).","Cuis les haricots verts et/ou des pommes de terre vapeur.","Sers ensemble."] },
+    { id: "r25", nom: "Gratin de pâtes au thon", emoji: "🐟", temps: "35 min", portions: "4 pers.", ing: [["Pâtes","Épicerie salée"],["Thon en boîte","Épicerie salée"],["Sauce tomate","Épicerie salée"],["Fromage râpé","Frais"]], etapes: ["Cuis les pâtes. Mélange-les avec le thon égoutté et la sauce tomate.","Verse dans un plat et couvre de fromage.","Gratine 15 min à 200°C."] },
+    { id: "r26", nom: "Curry de poulet & riz", emoji: "🍛", temps: "30 min", portions: "4 pers.", ing: [["Filets de poulet","Viande & Poisson"],["Lait de coco","Épicerie salée"],["Curry","Épicerie salée"],["Oignon","Fruits & Légumes"],["Riz","Épicerie salée"]], etapes: ["Coupe le poulet en dés et fais-le dorer avec l'oignon.","Saupoudre de curry, ajoute le lait de coco et laisse mijoter 15 min.","Sers avec du riz."] },
+    { id: "r27", nom: "Crêpes (salées ou sucrées)", emoji: "🥞", temps: "30 min", portions: "4 pers.", ing: [["Farine","Épicerie salée"],["Œufs","Frais"],["Lait","Frais"],["Beurre","Frais"]], etapes: ["Mélange farine, œufs, lait et une pincée de sel jusqu'à une pâte lisse.","Laisse reposer si tu peux, puis cuis des crêpes fines à la poêle.","Garnis : jambon-fromage-œuf, ou sucre et confiture."] },
+    { id: "r28", nom: "Gâteau au yaourt", emoji: "🍰", temps: "40 min", portions: "6 parts", ing: [["Yaourt","Frais"],["Farine","Épicerie salée"],["Sucre","Épicerie sucrée"],["Œufs","Frais"],["Huile","Épicerie salée"],["Levure","Épicerie sucrée"]], etapes: ["Préchauffe à 180°C. Le pot de yaourt sert de mesure.","Mélange 1 yaourt, 2 pots de sucre, 3 pots de farine, 3 œufs, 1/2 pot d'huile et 1 sachet de levure.","Verse dans un moule et cuis 30 min. Vérifie avec la lame d'un couteau."] },
+    { id: "r29", nom: "Velouté de butternut", emoji: "🎃", temps: "35 min", portions: "4 pers.", ing: [["Courge butternut","Fruits & Légumes"],["Pommes de terre","Fruits & Légumes"],["Oignon","Fruits & Légumes"],["Crème fraîche","Frais"]], etapes: ["Épluche et coupe la courge, la pomme de terre et l'oignon.","Couvre d'eau, sale et cuis 25 min.","Mixe avec un peu de crème."] },
+    { id: "r30", nom: "Salade composée complète", emoji: "🥗", temps: "15 min", portions: "4 pers.", ing: [["Salade","Fruits & Légumes"],["Tomates","Fruits & Légumes"],["Maïs en boîte","Épicerie salée"],["Thon en boîte","Épicerie salée"],["Œufs","Frais"]], etapes: ["Lave et coupe la salade et les tomates.","Ajoute le maïs, le thon et les œufs durs en quartiers.","Assaisonne (huile, vinaigre, moutarde, sel)."] }
   ];
 }
 function seed() {
   return {
-    version: 4,
+    version: 5,
     reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false },
     courses: [],
     recurrents: [
-      { nom: 'Lait', rayon: 'Frais' }, { nom: 'Pain', rayon: 'Petit-déj' }, { nom: 'Œufs', rayon: 'Frais' },
-      { nom: 'Beurre', rayon: 'Frais' }, { nom: 'Yaourts', rayon: 'Frais' }, { nom: 'Jambon', rayon: 'Frais' },
-      { nom: 'Pâtes', rayon: 'Épicerie salée' }, { nom: 'Riz', rayon: 'Épicerie salée' }, { nom: 'Céréales', rayon: 'Petit-déj' },
-      { nom: 'Compotes', rayon: 'Épicerie sucrée' }, { nom: 'Pommes', rayon: 'Fruits & Légumes' }, { nom: 'Bananes', rayon: 'Fruits & Légumes' },
-      { nom: 'Eau', rayon: 'Boissons' }, { nom: "Jus d'orange", rayon: 'Boissons' },
-      { nom: 'Papier toilette', rayon: 'Hygiène & Maison' }, { nom: 'Liquide vaisselle', rayon: 'Hygiène & Maison' }
+      { nom: 'Pommes', rayon: 'Fruits & Légumes' }, { nom: 'Bananes', rayon: 'Fruits & Légumes' }, { nom: 'Clémentines', rayon: 'Fruits & Légumes' },
+      { nom: 'Tomates', rayon: 'Fruits & Légumes' }, { nom: 'Salade', rayon: 'Fruits & Légumes' }, { nom: 'Carottes', rayon: 'Fruits & Légumes' },
+      { nom: 'Pommes de terre', rayon: 'Fruits & Légumes' }, { nom: 'Oignons', rayon: 'Fruits & Légumes' }, { nom: 'Ail', rayon: 'Fruits & Légumes' },
+      { nom: 'Courgettes', rayon: 'Fruits & Légumes' }, { nom: 'Concombre', rayon: 'Fruits & Légumes' }, { nom: 'Citrons', rayon: 'Fruits & Légumes' },
+      { nom: 'Lait', rayon: 'Frais' }, { nom: 'Beurre', rayon: 'Frais' }, { nom: 'Œufs', rayon: 'Frais' }, { nom: 'Yaourts', rayon: 'Frais' },
+      { nom: 'Crème fraîche', rayon: 'Frais' }, { nom: 'Gruyère râpé', rayon: 'Frais' }, { nom: 'Jambon', rayon: 'Frais' }, { nom: 'Fromage', rayon: 'Frais' },
+      { nom: 'Petits-suisses', rayon: 'Frais' }, { nom: 'Lardons', rayon: 'Frais' }, { nom: 'Pâte feuilletée', rayon: 'Frais' },
+      { nom: 'Steak haché', rayon: 'Viande & Poisson' }, { nom: 'Filets de poulet', rayon: 'Viande & Poisson' }, { nom: 'Saucisses', rayon: 'Viande & Poisson' }, { nom: 'Poisson', rayon: 'Viande & Poisson' },
+      { nom: 'Légumes surgelés', rayon: 'Surgelés' }, { nom: 'Poisson pané', rayon: 'Surgelés' }, { nom: 'Frites', rayon: 'Surgelés' }, { nom: 'Glaces', rayon: 'Surgelés' },
+      { nom: 'Pâtes', rayon: 'Épicerie salée' }, { nom: 'Riz', rayon: 'Épicerie salée' }, { nom: 'Sauce tomate', rayon: 'Épicerie salée' }, { nom: 'Thon en boîte', rayon: 'Épicerie salée' },
+      { nom: 'Maïs', rayon: 'Épicerie salée' }, { nom: 'Huile', rayon: 'Épicerie salée' }, { nom: 'Sel', rayon: 'Épicerie salée' }, { nom: 'Farine', rayon: 'Épicerie salée' },
+      { nom: 'Soupe', rayon: 'Épicerie salée' }, { nom: 'Ketchup', rayon: 'Épicerie salée' }, { nom: 'Moutarde', rayon: 'Épicerie salée' },
+      { nom: 'Sucre', rayon: 'Épicerie sucrée' }, { nom: 'Compotes', rayon: 'Épicerie sucrée' }, { nom: 'Confiture', rayon: 'Épicerie sucrée' },
+      { nom: 'Biscuits', rayon: 'Épicerie sucrée' }, { nom: 'Chocolat', rayon: 'Épicerie sucrée' }, { nom: 'Pâte à tartiner', rayon: 'Épicerie sucrée' },
+      { nom: 'Pain', rayon: 'Petit-déj' }, { nom: 'Pain de mie', rayon: 'Petit-déj' }, { nom: 'Céréales', rayon: 'Petit-déj' },
+      { nom: 'Café', rayon: 'Petit-déj' }, { nom: 'Chocolat en poudre', rayon: 'Petit-déj' }, { nom: 'Biscottes', rayon: 'Petit-déj' },
+      { nom: 'Eau', rayon: 'Boissons' }, { nom: "Jus d'orange", rayon: 'Boissons' }, { nom: 'Sirop', rayon: 'Boissons' },
+      { nom: 'Papier toilette', rayon: 'Hygiène & Maison' }, { nom: 'Essuie-tout', rayon: 'Hygiène & Maison' }, { nom: 'Liquide vaisselle', rayon: 'Hygiène & Maison' },
+      { nom: 'Lessive', rayon: 'Hygiène & Maison' }, { nom: 'Gel douche', rayon: 'Hygiène & Maison' }, { nom: 'Shampoing', rayon: 'Hygiène & Maison' },
+      { nom: 'Dentifrice', rayon: 'Hygiène & Maison' }, { nom: 'Éponges', rayon: 'Hygiène & Maison' }, { nom: 'Sacs poubelle', rayon: 'Hygiène & Maison' }, { nom: 'Mouchoirs', rayon: 'Hygiène & Maison' },
+      { nom: 'Goûters', rayon: 'Bébé & Enfant' }, { nom: 'Compotes à boire', rayon: 'Bébé & Enfant' }
     ],
     recettes: seedRecettes(),
     menu: {},
@@ -113,7 +146,7 @@ function migrate() {
   if (data.reglages.welcomeDismissed === undefined) data.reglages.welcomeDismissed = false;
   data.courses = data.courses || [];
   data.recurrents = data.recurrents || s.recurrents;
-  data.recettes = data.recettes || s.recettes;
+  data.recettes = seedRecettes().concat((data.recettes || []).filter((r) => !/^r\d+$/.test(r.id)));
   data.menu = data.menu || {};
   data.presence = data.presence || {};
   data.transition = data.transition || s.transition;
@@ -124,7 +157,7 @@ function migrate() {
   if (!data.routines) data.routines = s.routines;
   else if (data.routines.matin || data.routines.soir) { const old = data.routines; data.routines = seedRoutines(); data.routines.petit = { matin: old.matin || [], soir: old.soir || [] }; }
   else { data.routines.petit = data.routines.petit || seedRoutines().petit; data.routines.grand = data.routines.grand || seedRoutines().grand; }
-  data.version = 4;
+  data.version = 5;
 }
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) { toast('⚠️ Sauvegarde impossible (mémoire pleine ?)'); } }
 
@@ -293,7 +326,7 @@ function renderCourses(el) {
 
     <div class="section-title">Produits récurrents — ${editRec ? 'touche pour retirer' : 'touche pour ajouter'}</div>
     <div class="card">
-      <div class="chips">${data.recurrents.map((r, i) => `<button class="chip ${editRec ? 'del' : 'add'}" data-rec="${i}">${esc(r.nom)}${editRec ? ' ✕' : ''}</button>`).join('')}</div>
+      <div class="rec-groups">${RAYONS.map((ry) => { const items = data.recurrents.map((r, i) => ({ r, i })).filter((o) => o.r.rayon === ry); if (!items.length) return ''; return `<div class="rec-group"><div class="rayon-title">${esc(ry)}</div><div class="chips">${items.map((o) => `<button class="chip ${editRec ? 'del' : 'add'}" data-rec="${o.i}">${esc(o.r.nom)}${editRec ? ' ✕' : ''}</button>`).join('')}</div></div>`; }).join('')}</div>
       <button class="btn btn-mini btn-ghost" id="rec-edit" style="margin-top:8px">${editRec ? '✓ Terminé' : '✏️ Gérer mes récurrents'}</button>
       ${editRec ? `<div class="field-row" style="margin-top:8px"><input class="input" id="rec-nom" placeholder="Nouveau récurrent…" enterkeyhint="done" /><select class="select" id="rec-rayon">${RAYONS.map((r) => `<option>${r}</option>`).join('')}</select></div><button class="btn btn-mini btn-block" id="rec-add">Ajouter ce récurrent</button>` : ''}
     </div>
@@ -375,13 +408,15 @@ function renderRepas(el) {
       <p class="sub">Ajoute en une fois les ingrédients de tous les repas planifiés cette semaine à ta liste de courses.</p>
       <button class="btn btn-accent btn-block" id="w-allcart">Générer la liste de courses de la semaine</button>
     </div>
+    <button class="btn btn-primary btn-block" id="r-book" style="margin-bottom:14px">📖 Livre de recettes (${data.recettes.length} plats)</button>
     <div class="section-title">Piocher une recette (remplit le prochain jour libre)</div>
     <div class="card">
       <div class="chips">${data.recettes.map((r) => `<button class="chip" data-recette="${r.id}">${r.emoji} ${esc(r.nom)}</button>`).join('')}</div>
       <button class="btn btn-ghost" id="rc-toggle" style="margin-top:8px">➕ Ajouter ma recette</button>
       <div id="rc-form" ${showRecForm ? '' : 'hidden'} style="margin-top:8px">
         <input class="input" id="rc-nom" placeholder="Nom du plat (ex. Gratin de courgettes)" style="margin-bottom:8px" />
-        <textarea class="input" id="rc-ing" rows="4" placeholder="Un ingrédient par ligne. Tu peux préciser le rayon après une virgule :&#10;Courgettes, Fruits & Légumes&#10;Crème fraîche, Frais"></textarea>
+        <textarea class="input" id="rc-ing" rows="4" placeholder="Ingrédients — un par ligne (rayon après une virgule) :&#10;Courgettes, Fruits & Légumes&#10;Crème fraîche, Frais"></textarea>
+        <textarea class="input" id="rc-etapes" rows="4" style="margin-top:8px" placeholder="Étapes de préparation — une par ligne (facultatif) :&#10;Coupe les courgettes en rondelles&#10;Fais revenir 10 min à la poêle"></textarea>
         <button class="btn btn-primary btn-block" id="rc-save" style="margin-top:8px">Enregistrer la recette</button>
       </div>
     </div>`;
@@ -398,6 +433,7 @@ function renderRepas(el) {
   document.getElementById('w-allcart').addEventListener('click', () => addWeekToCourses(start));
   document.getElementById('r-random').addEventListener('click', () => { const r = data.recettes[Math.floor(Math.random() * data.recettes.length)]; data.menu[ti] = Object.assign({}, data.menu[ti], { meal: r.nom, rid: r.id }); save(); renderRepas(el); toast('🎲 Ce soir : ' + r.emoji + ' ' + r.nom); });
   document.getElementById('r-fill').addEventListener('click', () => fillWeek(start, el));
+  document.getElementById('r-book').addEventListener('click', openRecipeBook);
   el.querySelectorAll('[data-recette]').forEach((b) => b.addEventListener('click', () => {
     const r = data.recettes.find((x) => x.id === b.dataset.recette);
     let target = null;
@@ -415,7 +451,8 @@ function renderRepas(el) {
       if (p[1]) { const rt = p[1].trim().toLowerCase(); const f = RAYONS.find((x) => x.toLowerCase() === rt || x.toLowerCase().includes(rt) || rt.includes(x.toLowerCase())); if (f) rayon = f; }
       return [n, rayon];
     }).filter((x) => x[0]);
-    data.recettes.push({ id: uid(), nom, emoji: '🍴', ing }); showRecForm = false; save(); renderRepas(el); toast('Recette ajoutée ✓');
+    const etapes = document.getElementById('rc-etapes').value.split('\n').map((l) => l.trim()).filter(Boolean);
+    data.recettes.push({ id: uid(), nom, emoji: '🍴', temps: '', portions: '', ing, etapes }); showRecForm = false; save(); renderRepas(el); toast('Recette ajoutée ✓');
   });
 }
 function fillWeek(start, el) {
@@ -467,7 +504,7 @@ function openRecipePicker(key, slot) {
     </div>`;
   document.body.appendChild(ov);
   const assign = (rec) => { const mm = data.menu[key] || {}; if (slot === 'soir') { mm.meal = rec.nom; mm.rid = rec.id; } else { mm.midi = rec.nom; mm.midiRid = rec.id; } data.menu[key] = mm; save(); closeOverlay(); render(); toast(rec.emoji + ' ' + rec.nom); };
-  const wireRows = () => ov.querySelectorAll('[data-rid]').forEach((r) => r.addEventListener('click', () => assign(data.recettes.find((x) => x.id === r.dataset.rid))));
+  const wireRows = () => ov.querySelectorAll('.recipe').forEach((row) => { row.addEventListener('click', () => assign(data.recettes.find((x) => x.id === row.dataset.rid))); const info = row.querySelector('[data-info]'); if (info) info.addEventListener('click', (e) => { e.stopPropagation(); openRecipeDetail(row.dataset.rid, 'picker'); }); });
   wireRows();
   ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
   const search = ov.querySelector('#rp-search');
@@ -478,7 +515,49 @@ function recipeRowsHtml(filter) {
   const f = (filter || '').toLowerCase().trim();
   const list = data.recettes.filter((r) => !f || r.nom.toLowerCase().includes(f));
   if (!list.length) return `<div class="empty">Aucune recette trouvée.</div>`;
-  return list.map((r) => `<div class="item recipe" data-rid="${r.id}"><span class="label">${r.emoji} ${esc(r.nom)}</span><span class="go">＋</span></div>`).join('');
+  return list.map((r) => `<div class="item recipe" data-rid="${r.id}"><span class="label">${r.emoji} ${esc(r.nom)}</span><button class="rinfo" data-info="${r.id}" title="Voir la recette">ⓘ</button><span class="go">＋</span></div>`).join('');
+}
+function recipeBookRowsHtml(filter) {
+  const f = (filter || '').toLowerCase().trim();
+  const list = data.recettes.filter((r) => !f || r.nom.toLowerCase().includes(f));
+  if (!list.length) return `<div class="empty">Aucune recette trouvée.</div>`;
+  return list.map((r) => `<div class="item recipe" data-rid="${r.id}"><span class="label">${r.emoji} ${esc(r.nom)}</span>${r.temps ? `<span class="muted" style="margin-right:6px">${esc(r.temps)}</span>` : ''}<span class="go">›</span></div>`).join('');
+}
+function openRecipeBook() {
+  closeOverlay();
+  let filter = '';
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `
+    <div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>📖 Livre de recettes</h2></div>
+    <div class="overlay-body">
+      <input class="input" id="rb-search" placeholder="Rechercher une recette…" autocomplete="off" />
+      <p class="muted" style="margin:10px 2px">${data.recettes.length} recettes — touche pour voir la préparation</p>
+      <div class="list" id="rb-list">${recipeBookRowsHtml('')}</div>
+    </div>`;
+  document.body.appendChild(ov);
+  const wire = () => ov.querySelectorAll('.recipe').forEach((row) => row.addEventListener('click', () => openRecipeDetail(row.dataset.rid, 'book')));
+  wire();
+  ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
+  const s = ov.querySelector('#rb-search');
+  s.addEventListener('input', () => { filter = s.value; ov.querySelector('#rb-list').innerHTML = recipeBookRowsHtml(filter); wire(); });
+}
+function openRecipeDetail(rid, ctx) {
+  const r = data.recettes.find((x) => x.id === rid); if (!r) return;
+  closeOverlay();
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `
+    <div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>${r.emoji} ${esc(r.nom)}</h2></div>
+    <div class="overlay-body">
+      ${(r.temps || r.portions) ? `<div class="recipe-meta">${r.temps ? `<span>⏱️ ${esc(r.temps)}</span>` : ''}${r.portions ? `<span>👥 ${esc(r.portions)}</span>` : ''}</div>` : ''}
+      <div class="section-title">Ingrédients</div>
+      <div class="card"><div class="list">${r.ing.map(([n, ry]) => `<div class="item"><span class="label">${esc(n)}</span><span class="tag">${esc(ry)}</span></div>`).join('')}</div></div>
+      ${(r.etapes && r.etapes.length) ? `<div class="section-title">Préparation</div><div class="card"><ol class="steps">${r.etapes.map((s) => `<li>${esc(s)}</li>`).join('')}</ol></div>` : `<p class="muted" style="padding:4px">Pas d'étapes pour cette recette.</p>`}
+      <div class="btn-row" style="margin-top:6px"><button class="btn btn-accent" style="flex:1" id="rd-cart">🛒 Aux courses</button><button class="btn btn-primary" style="flex:1" id="rd-menu">🍽️ Au menu ce soir</button></div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', () => { closeOverlay(); if (ctx === 'book') openRecipeBook(); else render(); });
+  ov.querySelector('#rd-cart').addEventListener('click', () => { const n = pushIngredients(rid); save(); toast(n ? n + ' ingrédient(s) ajoutés aux courses' : 'Déjà dans la liste'); });
+  ov.querySelector('#rd-menu').addEventListener('click', () => { const ti = todayISO(); data.menu[ti] = Object.assign({}, data.menu[ti], { meal: r.nom, rid: r.id }); save(); closeOverlay(); setTab('repas'); toast('🍽️ Ce soir : ' + r.nom); });
 }
 
 /* ============================================================
