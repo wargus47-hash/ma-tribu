@@ -396,7 +396,7 @@ function renderAccueil(el) {
   const dc = el.querySelector('#d-cart');
   if (dc) dc.addEventListener('click', () => addRecetteToCourses(ti, 'soir'));
   const av = accueilTodayHtml(); if (av) el.insertAdjacentHTML('beforeend', av);
-  el.insertAdjacentHTML('beforeend', `<div class="section-title">Outils</div><div class="quick"><button id="ac-guide"><span class="e">📖</span>Guide du parent</button><button id="ac-dep"><span class="e">💶</span>Dépenses partagées</button><button id="ac-sitter"><span class="e">🧑‍🍼</span>Mode baby-sitter</button><button id="ac-idee"><span class="e">💡</span>Idée anti-écran</button></div><div class="card" style="margin-top:14px"><b>💛 Conseil du jour</b><br><span class="muted">${esc(conseilDuJour())}</span></div>`);
+  el.insertAdjacentHTML('beforeend', `<div class="section-title">Outils</div><div class="quick"><button id="ac-guide"><span class="e">📖</span>Guide du parent</button><button id="ac-dep"><span class="e">💶</span>Dépenses partagées</button><button id="ac-sitter"><span class="e">🧑‍🍼</span>Mode baby-sitter</button><button id="ac-idee"><span class="e">💡</span>Idée anti-écran</button></div><div class="card" style="margin-top:14px"><b>💛 Conseil du jour</b><br><span class="muted">${esc(conseilDuJour())}</span></div><div class="card"><b>🎯 Le défi de la semaine</b><br><span class="muted">${esc(defiSemaine())}</span></div>`);
   el.querySelector('#ac-guide').addEventListener('click', openGuide);
   el.querySelector('#ac-dep').addEventListener('click', openDepenses);
   el.querySelector('#ac-sitter').addEventListener('click', openSitter);
@@ -1471,10 +1471,113 @@ function seedPharmacie() { return ['Thermomètre', 'Paracétamol enfant (sirop)'
 function seedMenage() { return [["Vaisselle / lave-vaisselle", "Tous les jours"], ["Sortir les poubelles", "1×/semaine"], ["Lessive", "2×/semaine"], ["Passer l'aspirateur", "1×/semaine"], ["Salle de bain & WC", "1×/semaine"], ["Changer les draps", "Toutes les 2 sem."], ["Ranger les chambres", "1×/semaine"], ["Nettoyer le frigo", "1×/mois"]].map(([t, f]) => ({ id: uid(), texte: t, freq: f, fait: false })); }
 function conseilDuJour() { const start = new Date(new Date().getFullYear(), 0, 0); const day = Math.floor((new Date() - start) / 86400000); return CONSEILS[day % CONSEILS.length]; }
 
+const SITUATIONS = [
+  { emoji: '😡', titre: 'Il fait une crise / une colère', conseils: ["Garde ton calme : ta tension nourrit la sienne.", "Mets des mots sur son émotion : « tu es très en colère ».", "Propose un endroit pour se calmer, reste disponible sans céder sur la règle.", "Une fois apaisé, reparlez de ce qui s'est passé. On accueille l'émotion, pas forcément le comportement."] },
+  { emoji: '🍽️', titre: 'Il refuse de manger', conseils: ["Ne force pas, ne transforme pas le repas en bataille.", "Propose sans commenter ; représente l'aliment plus tard, sans pression.", "Implique-le (choisir, cuisiner) et sers de petites portions.", "Un enfant en bonne santé régule son appétit : fais-lui confiance."] },
+  { emoji: '🌙', titre: 'Cauchemars / il ne veut pas dormir', conseils: ["Garde un rituel du soir stable et calme (pas d'écran avant).", "Rassure sans t'éterniser : veilleuse, doudou, porte entrouverte.", "Après un cauchemar : réconforte brièvement puis recouche-le dans son lit.", "La régularité des horaires est ta meilleure alliée."] },
+  { emoji: '👊', titre: 'Disputes entre frère et sœur', conseils: ["N'arbitre pas tout : laisse-les régler les petits conflits.", "Interviens en cas de danger : sépare sans prendre parti.", "Nomme le besoin de chacun et cherchez une solution ensemble.", "Évite les comparaisons : chacun a son moment d'attention."] },
+  { emoji: '📱', titre: 'Il réclame les écrans', conseils: ["Fixe des règles claires et constantes (quand, combien).", "Annonce la fin : « encore 5 min, puis on éteint ».", "Propose une alternative concrète (un jeu, une sortie — onglet Jeux !).", "Montre l'exemple en limitant aussi les tiens."] },
+  { emoji: '😢', titre: 'Il est triste, la séparation est dure', conseils: ["Accueille ses émotions sans les minimiser : « c'est normal d'être triste ».", "Rassure : les deux parents l'aiment, ce n'est pas sa faute.", "Garde des repères stables dans tes deux semaines.", "Si la tristesse dure ou s'aggrave, parles-en à un professionnel."] },
+  { emoji: '🎒', titre: "Premier jour d'école / nouveauté", conseils: ["Parles-en avant, positivement, sans dramatiser.", "Préparez ensemble la veille (affaires, vêtements).", "Un au revoir court et confiant vaut mieux qu'un long câlin anxieux.", "Prévois un moment rien qu'à vous au retour pour raconter la journée."] },
+  { emoji: '🚽', titre: 'Pipi au lit, petits accidents', conseils: ["Reste bienveillant : ce n'est ni de la paresse ni de la provocation.", "Pas de honte ni de punition, ça empire les choses.", "Limite les boissons le soir, passage aux toilettes avant le lit.", "Si ça persiste après 5-6 ans, parles-en au médecin."] },
+  { emoji: '🤒', titre: 'Il est malade un jour de garde', conseils: ["Prends sa température, fais-le boire, repos.", "Préviens l'autre parent (cahier de liaison) et l'école.", "Garde le carnet de santé à portée (allergies, traitements).", "En cas de doute → rubrique « En cas de pépin », ou appelle le 15."] },
+  { emoji: '🗣️', titre: '« Je veux maman », « pas chez toi »', conseils: ["Ne le prends pas contre toi : c'est l'absence qu'il exprime, pas un rejet.", "Valide : « tu aimerais voir maman, c'est normal ».", "Propose un lien (un dessin, un appel si c'est possible).", "Puis recentrez-vous sur un moment positif ensemble."] }
+];
+const PHRASES = [
+  ["Il traîne le matin", "« Dépêche-toi, tu es toujours en retard ! »", "« Qu'est-ce qu'il te reste à faire avant de partir ? »"],
+  ["Il pleure", "« Arrête de pleurer ! »", "« Je vois que tu es triste. Raconte-moi. »"],
+  ["Il a fait une bêtise", "« Tu es insupportable ! »", "« Ce que tu as fait n'est pas ok. Comment on répare ? »"],
+  ["Il ne range pas", "« Range ta chambre, c'est un dépotoir ! »", "« On range ensemble 5 min ? On commence par les livres. »"],
+  ["Ils se disputent", "« Arrêtez tous les deux ! »", "« Chacun son tour me dit ce qui s'est passé. »"],
+  ["Il a peur", "« Il n'y a pas de raison d'avoir peur. »", "« Je suis là. Qu'est-ce qui te fait peur ? »"],
+  ["Tu es à bout", "« Tu me rends fou ! »", "« J'ai besoin d'une minute pour me calmer, je reviens. »"],
+  ["Il réussit quelque chose", "(un simple « c'est bien »)", "« Tu as travaillé dur, je suis fier de toi. »"],
+  ["Au coucher", "« Au lit, tout de suite ! »", "« C'est l'heure du câlin et de l'histoire. »"],
+  ["Il dit non", "« Parce que c'est comme ça ! »", "« Je comprends que tu n'aies pas envie. C'est l'heure quand même. »"]
+];
+const DEMARCHES = [
+  { emoji: '⚖️', titre: 'Garde & pension alimentaire', desc: "Par accord parental homologué ou via le juge aux affaires familiales (JAF). Garde toujours une trace écrite." },
+  { emoji: '💶', titre: 'CAF / allocations', desc: "Signale la séparation et la garde alternée : les allocations peuvent être partagées. Renseigne-toi sur l'ASF si la pension n'est pas versée." },
+  { emoji: '🏥', titre: 'Mutuelle & Sécurité sociale', desc: "Tu peux rattacher les enfants à ta mutuelle/sécu en plus de l'autre parent. Demande une carte Vitale à jour." },
+  { emoji: '🏫', titre: 'École', desc: "Donne ta nouvelle adresse et demande à recevoir aussi les infos : les deux parents y ont droit. Vérifie cantine et périscolaire." },
+  { emoji: '🧾', titre: 'Impôts', desc: "En garde alternée, les enfants comptent en principe pour une demi-part chez chaque parent. Pense à le déclarer." },
+  { emoji: '🏠', titre: 'Logement & aides', desc: "Tes aides (APL…) peuvent évoluer avec la nouvelle situation. Vérifie auprès de la CAF." },
+  { emoji: '📝', titre: 'Papiers à garder', desc: "Jugement, accord de garde, carnets de santé, livret de famille : range-les et fais des copies." }
+];
+const RESSOURCES = [
+  { nom: 'Enfance en danger', desc: "Écoute pour tout enfant en danger ou en difficulté. Gratuit, 24h/24.", tel: '119', telLabel: '119' },
+  { nom: 'Médecin de garde', desc: "Quand ton médecin est fermé (soir, week-end).", tel: '116117', telLabel: '116 117' },
+  { nom: 'Net Écoute', desc: "Écrans, harcèlement en ligne, réseaux.", tel: '3018', telLabel: '3018' },
+  { nom: 'CAF', desc: "Allocations, garde alternée, aides.", tel: '3230', telLabel: '3230' },
+  { nom: 'Médiation familiale', desc: "Pour mieux dialoguer avec l'autre parent : renseigne-toi en mairie, à la CAF ou au tribunal." },
+  { nom: 'Soutien à la parentalité', desc: "Maisons des familles, lieux d'accueil parents-enfants, associations locales : ta mairie ou la CAF peut t'orienter." },
+  { nom: 'Ton médecin ou un psy', desc: "Coup de mou, épuisement, tristesse qui dure : en parler est essentiel. N'attends pas d'être au fond." }
+];
+const SOINTOI = [
+  "Tu ne peux pas bien t'occuper d'eux si tu t'épuises. Te reposer est utile à tout le monde.",
+  "Garde un moment par semaine rien que pour toi (sport, ami, ou ne rien faire).",
+  "Mange et dors correctement : c'est la base, même quand c'est la course.",
+  "Parle de ce que tu vis : un ami, ta famille, un autre parent, un pro. Tu n'es pas seul.",
+  "Baisse tes exigences les jours durs. « Assez bien » suffit largement.",
+  "Le soir, repense à 3 choses qui ont été ok aujourd'hui, même petites.",
+  "Demander de l'aide n'est pas un échec, c'est une preuve de force."
+];
+const DEFIS = [
+  "Instaure le rituel du « rose & épine » à un dîner cette semaine.",
+  "Prépare les affaires du lendemain chaque soir pendant une semaine.",
+  "Planifie 3 dîners à l'avance et génère la liste de courses.",
+  "Range 5 min avec les enfants, comme un jeu, chaque soir.",
+  "Coupe les écrans (les tiens aussi) 30 min avant le coucher.",
+  "Marque tes prochains jours de garde dans le calendrier.",
+  "Cuisine une nouvelle recette avec eux ce week-end.",
+  "Fais une sortie de la liste « Sorties » cette semaine.",
+  "Prends un vrai moment rien que pour toi cette semaine.",
+  "Mets à jour le carnet de santé : allergies, tailles, médecin."
+];
+function defiSemaine() { const start = new Date(new Date().getFullYear(), 0, 1); const week = Math.floor((new Date() - start) / (7 * 86400000)); return DEFIS[week % DEFIS.length]; }
+function openSituations() {
+  closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>🧠 Que faire quand…</h2></div><div class="overlay-body">
+    ${SITUATIONS.map((s) => `<div class="section-title">${s.emoji} ${esc(s.titre)}</div><div class="card"><ul class="steps">${s.conseils.map((c) => `<li>${esc(c)}</li>`).join('')}</ul></div>`).join('')}
+    <p class="muted" style="text-align:center;font-size:12px">Des pistes générales — chaque enfant est unique, fie-toi aussi à ton ressenti.</p></div>`;
+  document.body.appendChild(ov); ov.querySelector('[data-back]').addEventListener('click', openGuide);
+}
+function openPhrases() {
+  closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>💬 Phrases qui aident</h2></div><div class="overlay-body">
+    <p class="muted" style="margin:0 2px 12px">Les mots comptent. Voici des reformulations qui désamorcent.</p>
+    ${PHRASES.map(([s, a, b]) => `<div class="card"><div class="muted" style="font-size:12px;margin-bottom:6px">${esc(s)}</div><p style="margin:0 0 6px">❌ <span style="color:var(--danger)">${esc(a)}</span></p><p style="margin:0">✅ <b>${esc(b)}</b></p></div>`).join('')}</div>`;
+  document.body.appendChild(ov); ov.querySelector('[data-back]').addEventListener('click', openGuide);
+}
+function openDemarches() {
+  closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>📑 Démarches du parent séparé</h2></div><div class="overlay-body">
+    <p class="muted" style="margin:0 2px 12px">Les principales démarches à ne pas oublier après une séparation.</p>
+    ${DEMARCHES.map((d) => `<div class="card"><p style="margin:0 0 4px"><b>${d.emoji} ${esc(d.titre)}</b></p><p style="margin:0" class="muted">${esc(d.desc)}</p></div>`).join('')}
+    <p class="muted" style="text-align:center;font-size:12px">Infos générales — renseigne-toi auprès des organismes concernés (CAF, mairie, avocat, JAF).</p></div>`;
+  document.body.appendChild(ov); ov.querySelector('[data-back]').addEventListener('click', openGuide);
+}
+function openRessources() {
+  closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>🆘 Ressources & soutien</h2></div><div class="overlay-body">
+    <p class="muted" style="margin:0 2px 12px">Tu n'es pas seul. Demander de l'aide est une force.</p>
+    <div class="card"><div class="list">${RESSOURCES.map((r) => `<div class="item"><span class="label"><b>${esc(r.nom)}</b><br><span class="muted" style="font-size:13px">${esc(r.desc)}</span></span>${r.tel ? `<a class="tel-link" href="tel:${esc(r.tel)}">📞 ${esc(r.telLabel)}</a>` : ''}</div>`).join('')}</div></div>
+    <p class="muted" style="text-align:center;font-size:12px">Numéros susceptibles d'évoluer — vérifie en cas de besoin.</p></div>`;
+  document.body.appendChild(ov); ov.querySelector('[data-back]').addEventListener('click', openGuide);
+}
+function openSoin() {
+  closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>🧘 Prendre soin de toi</h2></div><div class="overlay-body">
+    <div class="jbut">Un papa reposé et soutenu, c'est le plus beau cadeau pour tes enfants. 💛</div>
+    <div class="card"><div class="list">${SOINTOI.map((t) => `<div class="item"><span class="label">${esc(t)}</span></div>`).join('')}</div></div>
+    <div class="section-title">Respiration anti-stress (1 min)</div>
+    <div class="card"><p style="margin:0">Inspire par le nez <b>4 sec</b> → bloque <b>4 sec</b> → souffle par la bouche <b>6 sec</b>. Recommence <b>5 fois</b>. Parfait avant de réagir à chaud.</p></div></div>`;
+  document.body.appendChild(ov); ov.querySelector('[data-back]').addEventListener('click', openGuide);
+}
 function openGuide() {
   closeOverlay();
-  const items = [['🧰 Fiches pratiques maison', 'openFiches'], ['🧹 Planning ménage', 'openMenage'], ['🩹 En cas de pépin', 'openUrgences'], ['💊 Trousse à pharmacie', 'openTrousse'], ['🧭 Repères par âge', 'openReperes'], ['💛 Rituels & conseils', 'openRituels'], ['📋 Checklists de saison', 'openSaison']];
-  const map = { openFiches, openMenage, openUrgences, openTrousse, openReperes, openRituels, openSaison };
+  const items = [['🧠 Que faire quand…', 'openSituations'], ['💬 Phrases qui aident', 'openPhrases'], ['💛 Rituels & conseils', 'openRituels'], ['🧭 Repères par âge', 'openReperes'], ['🧰 Fiches pratiques maison', 'openFiches'], ['🧹 Planning ménage', 'openMenage'], ['🩹 En cas de pépin', 'openUrgences'], ['💊 Trousse à pharmacie', 'openTrousse'], ['📋 Checklists de saison', 'openSaison'], ['📑 Démarches (parent séparé)', 'openDemarches'], ['🆘 Ressources & soutien', 'openRessources'], ['🧘 Prendre soin de toi', 'openSoin']];
+  const map = { openFiches, openMenage, openUrgences, openTrousse, openReperes, openRituels, openSaison, openSituations, openPhrases, openDemarches, openRessources, openSoin };
   const ov = document.createElement('div'); ov.className = 'overlay';
   ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>📖 Le guide du parent</h2></div>
     <div class="overlay-body"><p class="muted" style="margin:0 2px 12px">Tout ce que personne ne t'a expliqué, réuni ici. Tu gères déjà très bien 💪</p>
