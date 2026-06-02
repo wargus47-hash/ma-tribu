@@ -299,7 +299,7 @@ let jxAge = 'tous';
 let jxLieu = 'tous';
 let jxFav = false;
 let jxSearch = '';
-const TITLES = { accueil: "Aujourd'hui", courses: 'Liste de courses', repas: 'Repas de la semaine', garde: 'Garde & transitions', famille: 'Routines & rappels', jeux: 'Bibliothèque de jeux' };
+const TITLES = { accueil: "Aujourd'hui", courses: 'Liste de courses', repas: 'Repas de la semaine', garde: 'Garde & transitions', famille: 'Routines & rappels', jeux: 'Bibliothèque de jeux', secours: 'Premiers secours' };
 
 function setTab(tab) {
   activeTab = tab;
@@ -312,7 +312,7 @@ function setTab(tab) {
 }
 function render() {
   const el = document.getElementById('screen-' + activeTab);
-  ({ accueil: renderAccueil, courses: renderCourses, repas: renderRepas, garde: renderGarde, famille: renderFamille, jeux: renderJeux }[activeTab])(el);
+  ({ accueil: renderAccueil, courses: renderCourses, repas: renderRepas, garde: renderGarde, famille: renderFamille, jeux: renderJeux, secours: renderSecours }[activeTab])(el);
 }
 
 /* Ligne de check-list cliquable sur toute sa surface (le ✕ ne coche pas) */
@@ -2001,6 +2001,73 @@ function injectWeather(el) {
     .then((g) => { if (!g.results || !g.results[0]) { set('<span class="muted">🌦️ Ville « ' + esc(ville) + ' » introuvable (Réglages).</span>'); return Promise.reject(); } const o = g.results[0]; return fetch('https://api.open-meteo.com/v1/forecast?latitude=' + o.latitude + '&longitude=' + o.longitude + '&current=temperature_2m,weather_code').then((r) => r.json()).then((w) => ({ name: o.name, temp: Math.round(w.current.temperature_2m), code: w.current.weather_code })); })
     .then((d) => { weatherCache = { ville, ts: Date.now(), data: d }; show(d); })
     .catch(() => { const c = el.querySelector('#weather-card'); if (c && /Météo…/.test(c.textContent)) set('<span class="muted">🌦️ Météo indisponible (hors-ligne).</span>'); });
+}
+
+/* ============================================================
+   SECOURS — gestes de premiers secours (tous publics)
+   ============================================================ */
+const SECOURS = [
+  { id: 'sc1', emoji: '🫀', titre: "Arrêt cardiaque", cat: 'Urgence vitale', gestes: ["La personne ne réagit pas et ne respire pas (ou anormalement).", "Appelle le 15 (ou fais-le appeler) et demande un défibrillateur.", "Compressions : au centre de la poitrine, bras tendus, appuie fort et vite (5-6 cm, 100 à 120 par minute).", "Si tu es formé : 30 compressions puis 2 insufflations. Sinon, fais les compressions sans t'arrêter.", "Dès qu'un défibrillateur (DAE) arrive, allume-le et suis ses instructions vocales."], alerte: "Appelle le 15 immédiatement et ne t'arrête qu'à l'arrivée des secours." },
+  { id: 'sc2', emoji: '😮‍💨', titre: "Étouffement (adulte ou enfant)", cat: 'Urgence vitale', gestes: ["La personne ne peut plus parler, tousser ni respirer.", "Donne 5 claques vigoureuses dans le dos, entre les omoplates.", "Si ça ne suffit pas : 5 compressions abdominales (Heimlich) — poing au creux de l'estomac, tire vers toi et vers le haut.", "Alterne 5 claques / 5 compressions jusqu'à ce que ça se débloque.", "Si la personne perd connaissance : allonge-la et commence les compressions (voir Arrêt cardiaque)."], alerte: "Appelle le 15 si l'obstruction ne se lève pas ou en cas de perte de connaissance." },
+  { id: 'sc3', emoji: '👶', titre: "Étouffement (bébé de moins d'1 an)", cat: 'Bébé & enfant', gestes: ["Allonge le bébé sur ton avant-bras, tête plus basse que le corps.", "Donne 5 claques dans le dos, entre les omoplates.", "Retourne-le sur le dos : 5 compressions thoraciques avec 2 doigts, au milieu de la poitrine.", "Alterne 5 claques / 5 compressions.", "NE FAIS PAS la méthode de Heimlich (compressions abdominales) sur un bébé."], alerte: "Appelle le 15 sans attendre." },
+  { id: 'sc4', emoji: '🩸', titre: "Hémorragie (saignement abondant)", cat: 'Urgence vitale', gestes: ["Appuie fortement et directement sur la plaie (avec un tissu propre si possible).", "Allonge la personne.", "Maintiens la pression sans jamais relâcher.", "Si tu as un garrot ET une formation, utilise-le sur un membre, en dernier recours (note l'heure de pose)."], alerte: "Appelle le 15 et continue de comprimer jusqu'aux secours." },
+  { id: 'sc5', emoji: '😵', titre: "Inconscient qui respire (PLS)", cat: 'Urgence vitale', gestes: ["La personne ne répond pas mais respire.", "Bascule doucement sa tête en arrière pour libérer les voies aériennes.", "Mets-la en Position Latérale de Sécurité (sur le côté, bouche tournée vers le sol).", "Surveille qu'elle continue de respirer.", "Couvre-la pour la garder au chaud."], alerte: "Appelle le 15 et surveille la respiration jusqu'aux secours." },
+  { id: 'sc6', emoji: '🧠', titre: "AVC (attaque cérébrale)", cat: 'Urgence vitale', gestes: ["Pense « VITE » : Visage qui tombe d'un côté ? Incapacité à lever un bras ? Trouble de la parole ?", "Si UN SEUL de ces signes apparaît, c'est une urgence.", "Note l'heure exacte d'apparition des signes (très important pour les médecins).", "Allonge la personne, ne lui donne ni à boire ni à manger."], alerte: "Appelle le 15 IMMÉDIATEMENT — chaque minute compte." },
+  { id: 'sc7', emoji: '❤️', titre: "Douleur dans la poitrine", cat: 'Malaise', gestes: ["Douleur qui serre la poitrine, parfois le bras gauche ou la mâchoire, avec sueurs et essoufflement.", "Mets la personne au repos complet, assise ou demi-assise.", "Desserre ses vêtements et rassure-la.", "Ne la laisse pas seule."], alerte: "Appelle le 15 sans attendre, même en cas de simple doute." },
+  { id: 'sc8', emoji: '🦴', titre: "Fracture ou entorse", cat: 'Traumatisme', gestes: ["Ne tente jamais de remettre le membre en place.", "Immobilise la zone dans la position où elle se trouve.", "Applique du froid (poche de glace dans un linge) pour limiter le gonflement.", "Surélève le membre si possible."], alerte: "Consulte les urgences ; appelle le 15 si déformation importante ou os apparent." },
+  { id: 'sc9', emoji: '🤕', titre: "Traumatisme crânien / grosse chute", cat: 'Traumatisme', gestes: ["Si tu suspectes une atteinte du dos ou de la nuque, NE BOUGE PAS la personne.", "Garde-la allongée et au calme, parle-lui.", "Surveille son état de conscience."], alerte: "Appelle le 15 en cas de perte de connaissance, vomissements, confusion, ou saignement de l'oreille/du nez." },
+  { id: 'sc10', emoji: '🩹', titre: "Plaie / coupure", cat: 'Brûlure & plaie', gestes: ["Lave-toi les mains. Nettoie la plaie à l'eau et au savon.", "Désinfecte, puis couvre d'un pansement.", "Si ça saigne, comprime quelques minutes."], alerte: "Consulte si la plaie est profonde, bâille, est très sale, ou si ton vaccin antitétanique n'est pas à jour." },
+  { id: 'sc11', emoji: '🔥', titre: "Brûlure", cat: 'Brûlure & plaie', gestes: ["Passe la zone sous l'eau fraîche (pas glacée) pendant 15 minutes.", "Retire bagues, montre et vêtements non collés à la peau.", "Ne perce pas les cloques, couvre d'un linge propre.", "Ne mets ni beurre, ni dentifrice, ni glaçon."], alerte: "Appelle le 15 si la brûlure est étendue, profonde, au visage, aux mains, aux parties génitales, ou chez un enfant." },
+  { id: 'sc12', emoji: '😣', titre: "Malaise / évanouissement", cat: 'Malaise', gestes: ["Allonge la personne et surélève ses jambes.", "Desserre ses vêtements et fais de l'air.", "Si elle est diabétique et consciente, donne-lui du sucre.", "Au réveil, laisse-la se relever tout doucement."], alerte: "Appelle le 15 si elle ne reprend pas connaissance rapidement ou se sent vraiment mal." },
+  { id: 'sc13', emoji: '🌡️', titre: "Coup de chaleur / insolation", cat: 'Malaise', gestes: ["Mets la personne à l'ombre, au frais.", "Déshabille-la en partie et rafraîchis-la (linge humide, ventilation).", "Fais-la boire de l'eau fraîche si elle est consciente."], alerte: "Appelle le 15 en cas de fièvre élevée, confusion ou perte de connaissance." },
+  { id: 'sc14', emoji: '🐝', titre: "Réaction allergique grave", cat: 'Urgence vitale', gestes: ["Gonflement du visage, des lèvres ou de la gorge, difficulté à respirer, malaise.", "Si la personne a un stylo d'adrénaline prescrit, aide-la à l'utiliser (dans la cuisse).", "Installe-la assise pour mieux respirer (ou allongée si elle se sent mal)."], alerte: "Appelle le 15 IMMÉDIATEMENT." },
+  { id: 'sc15', emoji: '⚡', titre: "Crise d'épilepsie (convulsions)", cat: 'Malaise', gestes: ["Écarte les objets dangereux et protège sa tête (coussin, vêtement).", "NE mets RIEN dans sa bouche et ne la maintiens pas de force.", "Note l'heure de début de la crise.", "Quand les secousses s'arrêtent, mets-la en PLS (sur le côté)."], alerte: "Appelle le 15 si la crise dure plus de 5 min, se répète, ou si c'est la première fois." },
+  { id: 'sc16', emoji: '🧪', titre: "Intoxication (produit, médicament)", cat: 'Autre', gestes: ["Ne fais PAS vomir la personne.", "Ne lui donne rien à boire sans avis médical.", "Garde l'emballage du produit ou du médicament avec toi."], alerte: "Appelle le Centre antipoison (01 45 42 59 00) ou le 15." },
+  { id: 'sc17', emoji: '🌊', titre: "Noyade", cat: 'Urgence vitale', gestes: ["Sors la personne de l'eau en assurant TA sécurité d'abord.", "Si elle ne respire pas, commence la réanimation (voir Arrêt cardiaque).", "Si elle respire, mets-la en PLS et couvre-la."], alerte: "Appelle le 15 ou le 18 sans attendre." },
+  { id: 'sc18', emoji: '🔌', titre: "Électrisation", cat: 'Urgence vitale', gestes: ["COUPE le courant AVANT de toucher la personne (disjoncteur, prise).", "Ne la touche jamais tant que le courant passe.", "Une fois en sécurité, vérifie sa respiration : PLS ou réanimation selon son état."], alerte: "Appelle le 15 ou le 18." },
+  { id: 'sc19', emoji: '👃', titre: "Saignement de nez", cat: 'Brûlure & plaie', gestes: ["Assieds la personne, tête penchée en AVANT (surtout pas en arrière).", "Pince fermement les narines pendant 10 minutes, sans relâcher.", "Fais-la respirer par la bouche."], alerte: "Consulte si le saignement dure plus de 20 min, est très abondant, ou survient après un choc à la tête." },
+  { id: 'sc20', emoji: '🐍', titre: "Piqûre / morsure", cat: 'Autre', gestes: ["Piqûre d'insecte : retire le dard, désinfecte, applique du froid.", "Tique : retire-la avec un tire-tique sans l'écraser, désinfecte, surveille l'apparition d'une rougeur.", "Morsure animale : lave abondamment à l'eau et au savon, puis désinfecte."], alerte: "Appelle le 15 en cas de gêne respiratoire (allergie), de morsure de serpent ou de morsure profonde." }
+];
+let secCat = 'Tout';
+let secSearch = '';
+function secoursRowsHtml() {
+  const f = secSearch.toLowerCase().trim();
+  const list = SECOURS.filter((s) => (secCat === 'Tout' || s.cat === secCat) && (!f || s.titre.toLowerCase().includes(f)));
+  if (!list.length) return '<div class="empty"><span class="e">🔍</span>Aucun geste trouvé.</div>';
+  return list.map((s) => `<div class="item recipe" data-secid="${s.id}"><span class="label">${s.emoji} ${esc(s.titre)}<br><span class="muted" style="font-size:12px">${esc(s.cat)}</span></span><span class="go">›</span></div>`).join('');
+}
+function renderSecours(el) {
+  const cats = ['Tout', 'Urgence vitale', 'Traumatisme', 'Malaise', 'Brûlure & plaie', 'Bébé & enfant', 'Autre'];
+  el.innerHTML = `
+    <div class="jbut" style="background:#fde8e4;color:var(--danger)">⚠️ Ces fiches ne remplacent pas une formation aux premiers secours (PSC1). En cas d'urgence, appelle le 15 ou le 112.</div>
+    <div class="card"><h2>📞 Numéros d'urgence</h2><div class="quick">
+      <a class="sec-num" href="tel:15"><b>15</b><span>SAMU</span></a>
+      <a class="sec-num" href="tel:112"><b>112</b><span>Urgences (Europe)</span></a>
+      <a class="sec-num" href="tel:18"><b>18</b><span>Pompiers</span></a>
+      <a class="sec-num" href="tel:17"><b>17</b><span>Police</span></a>
+      <a class="sec-num" href="tel:114"><b>114</b><span>Sourds (par SMS)</span></a>
+      <a class="sec-num" href="tel:0145425900"><b>☎️</b><span>Antipoison</span></a>
+    </div></div>
+    <div class="card" style="text-align:center"><b>Le réflexe : PROTÉGER → ALERTER → SECOURIR</b><br><span class="muted" style="font-size:13px">Mets en sécurité, appelle le 15, puis agis.</span></div>
+    <input class="input" id="sec-search" placeholder="Rechercher un geste…" autocomplete="off" value="${esc(secSearch)}" />
+    <div class="chips" style="margin-top:10px">${cats.map((c) => `<button class="chip ${secCat === c ? 'on' : ''}" data-seccat="${esc(c)}">${c}</button>`).join('')}</div>
+    <div class="list" id="sec-list" style="margin-top:8px">${secoursRowsHtml()}</div>`;
+  el.querySelector('#sec-search').addEventListener('input', (e) => { secSearch = e.target.value; el.querySelector('#sec-list').innerHTML = secoursRowsHtml(); wireSec(el); });
+  el.querySelectorAll('[data-seccat]').forEach((b) => b.addEventListener('click', () => { secCat = b.dataset.seccat; renderSecours(el); }));
+  wireSec(el);
+}
+function wireSec(scope) { scope.querySelectorAll('[data-secid]').forEach((r) => r.addEventListener('click', () => openSecoursDetail(r.dataset.secid))); }
+function openSecoursDetail(id) {
+  const s = SECOURS.find((x) => x.id === id); if (!s) return; closeOverlay();
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>${s.emoji} ${esc(s.titre)}</h2></div><div class="overlay-body">
+    <div class="section-title">Les gestes, étape par étape</div>
+    <div class="card"><ol class="steps">${s.gestes.map((g) => `<li>${esc(g)}</li>`).join('')}</ol></div>
+    ${s.alerte ? `<div class="jbut" style="background:#fde8e4;color:var(--danger)">📞 ${esc(s.alerte)}</div>` : ''}
+    <a class="btn btn-block" href="tel:15" style="background:var(--danger);color:#fff">📞 Appeler le 15 (SAMU)</a>
+    <p class="muted" style="text-align:center;font-size:12px;margin-top:10px">Le mieux : suis une formation PSC1 (souvent gratuite via les pompiers, la Croix-Rouge…).</p></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-back]').addEventListener('click', () => { closeOverlay(); render(); });
 }
 
 /* ---------- Démarrage ---------- */
