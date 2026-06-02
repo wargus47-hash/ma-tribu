@@ -157,8 +157,8 @@ function seedRecettes() {
 }
 function seed() {
   return {
-    version: 12,
-    reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false, theme: 'clair', accent: 'teal', midiSemaine: false, notifs: false, lastNotif: '', consignesSitter: '', ville: '' },
+    version: 13,
+    reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false, theme: 'clair', accent: 'teal', midiSemaine: false, notifs: false, lastNotif: '', consignesSitter: '', ville: '', lastExport: '' },
     courses: [],
     recurrents: [
       { nom: 'Pommes', rayon: 'Fruits & Légumes' }, { nom: 'Bananes', rayon: 'Fruits & Légumes' }, { nom: 'Clémentines', rayon: 'Fruits & Légumes' },
@@ -255,6 +255,7 @@ function migrate() {
   if (!data.recompenses) data.recompenses = seedRecompenses(); else { data.recompenses.petit = data.recompenses.petit || seedRecompenses().petit; data.recompenses.grand = data.recompenses.grand || seedRecompenses().grand; }
   if (data.reglages.consignesSitter === undefined) data.reglages.consignesSitter = '';
   if (data.reglages.ville === undefined) data.reglages.ville = '';
+  if (data.reglages.lastExport === undefined) data.reglages.lastExport = '';
   data.pharmacie = data.pharmacie || seedPharmacie();
   data.menage = data.menage || seedMenage();
   if (!data.finances) data.finances = { revenu: 0, charges: [], depenses: [] }; else { data.finances.charges = data.finances.charges || []; data.finances.depenses = data.finances.depenses || []; if (data.finances.revenu === undefined) data.finances.revenu = 0; }
@@ -267,7 +268,7 @@ function migrate() {
   if (!data.routines) data.routines = s.routines;
   else if (data.routines.matin || data.routines.soir) { const old = data.routines; data.routines = seedRoutines(); data.routines.petit = { matin: old.matin || [], soir: old.soir || [] }; }
   else { data.routines.petit = data.routines.petit || seedRoutines().petit; data.routines.grand = data.routines.grand || seedRoutines().grand; }
-  data.version = 12;
+  data.version = 13;
 }
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) { toast('⚠️ Sauvegarde impossible (mémoire pleine ?)'); } }
 
@@ -414,6 +415,13 @@ function renderAccueil(el) {
   el.querySelector('#ac-journal').addEventListener('click', openJournal);
   el.querySelector('#ac-frigo').addEventListener('click', openFrigo);
   injectWeather(el);
+  const lastEx = data.reglages.lastExport;
+  const hasData = data.courses.length || data.journal.length || data.rappels.length || Object.keys(data.presence).length || Object.keys(data.menu).length;
+  const dEx = lastEx ? Math.round((parseISO(todayISO()) - parseISO(lastEx)) / 86400000) : 999;
+  if (hasData && dEx > 14) {
+    el.insertAdjacentHTML('afterbegin', `<div class="card" style="border:1px solid #f4d68a;background:#fff7e8;color:#7a5a00"><b>💾 Pense à sauvegarder</b><br><span style="font-size:13px">Tes données vivent sur ce téléphone uniquement. ${lastEx ? 'Dernière sauvegarde il y a ' + dEx + ' jours.' : "Tu n'as pas encore fait de sauvegarde."}</span><button class="btn btn-mini btn-block" id="backup-now" style="margin-top:8px">💾 Sauvegarder maintenant</button></div>`);
+    el.querySelector('#backup-now').addEventListener('click', () => { exportData(); renderAccueil(el); });
+  }
 }
 function rappelLabel(s) {
   const diff = Math.round((parseISO(s) - parseISO(todayISO())) / 86400000);
@@ -953,7 +961,7 @@ function exportData() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url; a.download = 'ma-tribu-' + todayISO() + '.json'; a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000); toast('Sauvegarde téléchargée');
+  setTimeout(() => URL.revokeObjectURL(url), 1000); data.reglages.lastExport = todayISO(); save(); toast('Sauvegarde téléchargée ✓');
 }
 function importData(file) {
   const r = new FileReader();
@@ -2026,7 +2034,11 @@ const SECOURS = [
   { id: 'sc17', emoji: '🌊', titre: "Noyade", cat: 'Urgence vitale', gestes: ["Sors la personne de l'eau en assurant TA sécurité d'abord.", "Si elle ne respire pas, commence la réanimation (voir Arrêt cardiaque).", "Si elle respire, mets-la en PLS et couvre-la."], alerte: "Appelle le 15 ou le 18 sans attendre." },
   { id: 'sc18', emoji: '🔌', titre: "Électrisation", cat: 'Urgence vitale', gestes: ["COUPE le courant AVANT de toucher la personne (disjoncteur, prise).", "Ne la touche jamais tant que le courant passe.", "Une fois en sécurité, vérifie sa respiration : PLS ou réanimation selon son état."], alerte: "Appelle le 15 ou le 18." },
   { id: 'sc19', emoji: '👃', titre: "Saignement de nez", cat: 'Brûlure & plaie', gestes: ["Assieds la personne, tête penchée en AVANT (surtout pas en arrière).", "Pince fermement les narines pendant 10 minutes, sans relâcher.", "Fais-la respirer par la bouche."], alerte: "Consulte si le saignement dure plus de 20 min, est très abondant, ou survient après un choc à la tête." },
-  { id: 'sc20', emoji: '🐍', titre: "Piqûre / morsure", cat: 'Autre', gestes: ["Piqûre d'insecte : retire le dard, désinfecte, applique du froid.", "Tique : retire-la avec un tire-tique sans l'écraser, désinfecte, surveille l'apparition d'une rougeur.", "Morsure animale : lave abondamment à l'eau et au savon, puis désinfecte."], alerte: "Appelle le 15 en cas de gêne respiratoire (allergie), de morsure de serpent ou de morsure profonde." }
+  { id: 'sc20', emoji: '🐍', titre: "Piqûre / morsure", cat: 'Autre', gestes: ["Piqûre d'insecte : retire le dard, désinfecte, applique du froid.", "Tique : retire-la avec un tire-tique sans l'écraser, désinfecte, surveille l'apparition d'une rougeur.", "Morsure animale : lave abondamment à l'eau et au savon, puis désinfecte."], alerte: "Appelle le 15 en cas de gêne respiratoire (allergie), de morsure de serpent ou de morsure profonde." },
+  { id: 'sc21', emoji: '🍬', titre: "Hypoglycémie (malaise du diabétique)", cat: 'Malaise', gestes: ["Signes chez un diabétique : sueurs, tremblements, pâleur, confusion, faim soudaine.", "Si la personne est consciente : donne-lui du sucre vite (morceaux de sucre, jus de fruits, soda — pas « light »).", "Reste avec elle ; elle devrait aller mieux en 10 à 15 minutes.", "Si elle est inconsciente : NE donne RIEN par la bouche et mets-la en PLS."], alerte: "Appelle le 15 si elle est inconsciente, convulse, ou ne s'améliore pas." },
+  { id: 'sc22', emoji: '👁️', titre: "Projection dans l'œil", cat: 'Autre', gestes: ["Rince l'œil abondamment à l'eau tiède pendant au moins 15 minutes.", "Garde l'œil ouvert ; fais couler l'eau du coin interne vers l'extérieur.", "Ne frotte pas l'œil. Retire les lentilles si tu peux.", "Garde l'emballage du produit s'il s'agit d'un produit chimique."], alerte: "Appelle le 15 ou le Centre antipoison pour un produit chimique ; consulte en urgence si douleur ou baisse de vue." },
+  { id: 'sc23', emoji: '🦷', titre: "Dent cassée ou arrachée", cat: 'Traumatisme', gestes: ["Récupère la dent en la tenant par le haut (la couronne), jamais par la racine.", "Ne la nettoie pas et ne la frotte pas.", "Conserve-la dans du lait (ou dans la salive, contre la joue) pour la garder vivante.", "File chez le dentiste : une dent peut parfois être réimplantée dans l'heure."], alerte: "Consulte un dentiste en urgence (ou le 15 en cas de gros traumatisme du visage)." },
+  { id: 'sc24', emoji: '🫁', titre: "Crise d'asthme", cat: 'Malaise', gestes: ["Installe la personne assise, légèrement penchée en avant, et rassure-la.", "Aide-la à prendre son inhalateur de secours (le bleu), 1 à 2 bouffées.", "Renouvelle selon sa prescription si nécessaire.", "Desserre ses vêtements et fais de l'air."], alerte: "Appelle le 15 si la gêne est forte, si l'inhalateur ne fait pas effet, ou si elle a du mal à parler." }
 ];
 let secCat = 'Tout';
 let secSearch = '';
