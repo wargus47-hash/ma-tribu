@@ -33,8 +33,8 @@ function applyTheme() {
 function todayDow() { return (new Date().getDay() + 6) % 7; }
 function tempsMin(t) { if (!t) return 999; t = String(t).toLowerCase(); let m = 0; const h = t.match(/(\d+)\s*h/); if (h) m += parseInt(h[1], 10) * 60; const mn = t.match(/(\d+)\s*min/); if (mn) m += parseInt(mn[1], 10); if (!h && !mn) { const n = parseInt(t, 10); if (!isNaN(n)) m = n; } return m || 999; }
 const DESSERT_IDS = new Set(['r27', 'r28', 'r45', 'r46', 'r47', 'r48']);
-function seedSante() { const blank = () => ({ allergies: '', traitements: '', medecin: '', groupe: '', vetements: '', pointure: '', notes: [], medicaments: [], mesures: [] }); return { petit: blank(), grand: blank() }; }
-function seedRecompenses() { const b = () => ({ etoiles: 0, objectif: 10, recompense: '' }); return { petit: b(), grand: b() }; }
+function seedSanteFor() { return { allergies: '', traitements: '', medecin: '', groupe: '', vetements: '', pointure: '', notes: [], medicaments: [], mesures: [] }; }
+function seedRecompensesFor() { return { etoiles: 0, objectif: 10, recompense: '' }; }
 function soldeCoparent() { let s = 0; data.depenses.forEach((d) => { const part = (+d.montant || 0) / 2; if (d.payePar === 'moi') s += part; else s -= part; }); return s; }
 function nextAnnivInfo(s) {
   if (!s) return null; const p = s.split('-'); const mo = +p[1], da = +p[2]; if (!mo || !da) return null;
@@ -96,13 +96,14 @@ function pictoFor(s) {
 }
 
 /* ---------- Données par défaut ---------- */
-function seedRoutines() {
+function seedRoutinesFor() {
   const mk = (arr) => arr.map((x) => ({ id: uid(), texte: x, fait: false }));
-  return {
-    petit: { matin: mk(['Se lever', "S'habiller", 'Petit-déjeuner', 'Se brosser les dents']), soir: mk(['Le bain', 'Dîner', 'Se brosser les dents', 'Une histoire', 'Au lit']) },
-    grand: { matin: mk(['Se lever', "S'habiller", 'Petit-déjeuner', 'Se brosser les dents', 'Préparer le cartable']), soir: mk(['Devoirs', 'Douche', 'Dîner', 'Se brosser les dents', 'Lecture', 'Au lit']) }
-  };
+  return { matin: mk(['Se lever', "S'habiller", 'Petit-déjeuner', 'Se brosser les dents']), soir: mk(['Dîner', 'Bain ou douche', 'Se brosser les dents', 'Une histoire', 'Au lit']) };
 }
+function childName(id) { const e = (data.enfants || []).find((x) => x.id === id); return e ? e.prenom : ''; }
+function seedEnfant(prenom) { const id = uid(); data.enfants.push({ id, prenom: (prenom || 'Enfant').trim() || 'Enfant' }); data.routines[id] = seedRoutinesFor(); data.sante[id] = seedSanteFor(); data.recompenses[id] = seedRecompensesFor(); return id; }
+function quiLabel(q) { return q === 'tous' ? 'Tous' : (childName(q) || '?'); }
+function quiOptions(sel) { return '<option value="tous">Tous</option>' + (data.enfants || []).map((e) => `<option value="${e.id}"${sel === e.id ? ' selected' : ''}>${esc(e.prenom)}</option>`).join(''); }
 function seedRecettes() {
   return [
     { id: "r1", nom: "Pâtes bolognaise", emoji: "🍝", temps: "30 min", portions: "4 pers.", ing: [["Pâtes","Épicerie salée"],["Viande hachée","Viande & Poisson"],["Sauce tomate","Épicerie salée"],["Oignon","Fruits & Légumes"],["Gruyère râpé","Frais"]], etapes: ["Émince l'oignon et fais-le revenir dans un filet d'huile.","Ajoute la viande hachée et fais-la dorer en l'émiettant.","Verse la sauce tomate, sale, poivre, laisse mijoter 15 min.","Cuis les pâtes dans l'eau bouillante salée (voir paquet).","Égoutte, mélange à la sauce et sers avec le gruyère."] },
@@ -157,7 +158,7 @@ function seedRecettes() {
 }
 function seed() {
   return {
-    version: 13,
+    version: 14,
     reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false, theme: 'clair', accent: 'teal', midiSemaine: false, notifs: false, lastNotif: '', consignesSitter: '', ville: '', lastExport: '' },
     courses: [],
     recurrents: [
@@ -191,13 +192,14 @@ function seed() {
       ['Pyjama','deux'],['Manteau / veste','deux'],['Médicaments / ordonnance','deux'],['Chargeur / tablette','grand'],
       ['Gourde','deux'],['Devoirs / cahier de liaison','grand']
     ].map(([nom, qui]) => ({ id: uid(), nom, qui, fait: false })),
-    routines: seedRoutines(),
+    enfants: [{ id: 'e1', prenom: 'Mon enfant' }],
+    routines: { e1: seedRoutinesFor() },
     rappels: [],
     contacts: [],
     budget: [],
     notes: [],
     activites: [],
-    sante: seedSante(),
+    sante: { e1: seedSanteFor() },
     anniversaires: [],
     favoris: [],
     listesExtra: [],
@@ -207,7 +209,7 @@ function seed() {
     liaison: [],
     vacances: [],
     devoirs: [],
-    recompenses: seedRecompenses(),
+    recompenses: { e1: seedRecompensesFor() },
     pharmacie: seedPharmacie(),
     menage: seedMenage(),
     finances: { revenu: 0, charges: [], depenses: [] },
@@ -252,7 +254,7 @@ function migrate() {
   data.liaison = data.liaison || [];
   data.vacances = data.vacances || [];
   data.devoirs = data.devoirs || [];
-  if (!data.recompenses) data.recompenses = seedRecompenses(); else { data.recompenses.petit = data.recompenses.petit || seedRecompenses().petit; data.recompenses.grand = data.recompenses.grand || seedRecompenses().grand; }
+  data.recompenses = data.recompenses || {};
   if (data.reglages.consignesSitter === undefined) data.reglages.consignesSitter = '';
   if (data.reglages.ville === undefined) data.reglages.ville = '';
   if (data.reglages.lastExport === undefined) data.reglages.lastExport = '';
@@ -263,12 +265,31 @@ function migrate() {
   data.cadeaux = data.cadeaux || [];
   data.coffre = data.coffre || [];
   data.listesExtra = data.listesExtra || [];
-  if (!data.sante) data.sante = seedSante();
-  ['petit', 'grand'].forEach((c) => { data.sante[c] = data.sante[c] || seedSante().petit; data.sante[c].notes = data.sante[c].notes || []; data.sante[c].medicaments = data.sante[c].medicaments || []; data.sante[c].mesures = data.sante[c].mesures || []; if (data.sante[c].vetements === undefined) data.sante[c].vetements = ''; if (data.sante[c].pointure === undefined) data.sante[c].pointure = ''; });
-  if (!data.routines) data.routines = s.routines;
-  else if (data.routines.matin || data.routines.soir) { const old = data.routines; data.routines = seedRoutines(); data.routines.petit = { matin: old.matin || [], soir: old.soir || [] }; }
-  else { data.routines.petit = data.routines.petit || seedRoutines().petit; data.routines.grand = data.routines.grand || seedRoutines().grand; }
-  data.version = 13;
+  // --- enfants : liste configurable (migration depuis l'ancien petit/grand) ---
+  data.routines = data.routines || {};
+  data.sante = data.sante || {};
+  if (!Array.isArray(data.enfants)) {
+    const r = data.reglages || {};
+    data.enfants = [{ id: 'e1', prenom: r.petit || 'Le petit' }, { id: 'e2', prenom: r.grand || 'Le grand' }];
+    const oldR = data.routines;
+    const petitR = (oldR.matin || oldR.soir) ? { matin: oldR.matin || [], soir: oldR.soir || [] } : (oldR.petit || seedRoutinesFor());
+    data.routines = { e1: petitR, e2: oldR.grand || seedRoutinesFor() };
+    data.sante = { e1: data.sante.petit || seedSanteFor(), e2: data.sante.grand || seedSanteFor() };
+    data.recompenses = { e1: data.recompenses.petit || seedRecompensesFor(), e2: data.recompenses.grand || seedRecompensesFor() };
+    const mq = (q) => q === 'petit' ? 'e1' : q === 'grand' ? 'e2' : q === 'deux' ? 'tous' : q;
+    (data.transition || []).forEach((t) => { t.qui = mq(t.qui); });
+    (data.activites || []).forEach((a) => { a.qui = mq(a.qui); });
+  }
+  if (!data.enfants.length) seedEnfant('Mon enfant');
+  data.enfants.forEach((e) => {
+    data.routines[e.id] = data.routines[e.id] || seedRoutinesFor();
+    data.routines[e.id].matin = data.routines[e.id].matin || []; data.routines[e.id].soir = data.routines[e.id].soir || [];
+    const sa = data.sante[e.id] = data.sante[e.id] || seedSanteFor();
+    sa.notes = sa.notes || []; sa.medicaments = sa.medicaments || []; sa.mesures = sa.mesures || [];
+    ['allergies', 'traitements', 'medecin', 'groupe', 'vetements', 'pointure'].forEach((k) => { if (sa[k] === undefined) sa[k] = ''; });
+    data.recompenses[e.id] = data.recompenses[e.id] || seedRecompensesFor();
+  });
+  data.version = 14;
 }
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) { toast('⚠️ Sauvegarde impossible (mémoire pleine ?)'); } }
 
@@ -290,7 +311,7 @@ function confirmDialog(msg, onYes, opts) {
 let activeTab = 'accueil';
 let calRef = mondayOf(today());
 let weekRef = mondayOf(today());
-let familleChild = 'petit';
+let familleChild = '';
 let showRecForm = false;
 let editRec = false;
 let rangeMode = false;
@@ -335,8 +356,7 @@ function renderAccueil(el) {
   const transitionRestante = data.transition.filter((x) => !x.fait).length;
   const ex = nextExchange();
   const mom = moment();
-  const prog = (child) => { const l = data.routines[child][mom]; return { d: l.filter((x) => x.fait).length, t: l.length }; };
-  const pP = prog('petit'), pG = prog('grand');
+  const prog = (child) => { const l = (data.routines[child] || {})[mom] || []; return { d: l.filter((x) => x.fait).length, t: l.length }; };
   const prochains = data.rappels.filter((r) => !r.fait).sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999')).slice(0, 3);
 
   el.innerHTML = `
@@ -345,7 +365,7 @@ function renderAccueil(el) {
         <h2>👋 Bienvenue dans Ma Tribu</h2>
         <div class="muted">Ton quotidien, en 4 réflexes :</div>
         <ol>
-          <li><b>⚙️ en haut à droite</b> → mets les prénoms des enfants</li>
+          <li><b>⚙️ en haut à droite</b> → ajoute tes enfants (« Mes enfants »)</li>
           <li><b>📅 Garde</b> → marque tes jours (ou périodes) de garde</li>
           <li><b>🍽️ Repas</b> → planifie, puis envoie les ingrédients aux 🛒 Courses</li>
           <li><b>🎒 Garde</b> → coche le sac de transition à chaque échange</li>
@@ -373,12 +393,12 @@ function renderAccueil(el) {
 
     <div class="section-title">${mom === 'matin' ? '☀️ Routines du matin' : '🌙 Routines du soir'}</div>
     <div class="card">
-      ${[['petit', data.reglages.petit, pP], ['grand', data.reglages.grand, pG]].map(([c, nom, p]) => `
-        <div class="prog-row" data-mode="${c}">
-          <span class="nm">${esc(nom)}</span>
+      ${data.enfants.map((e) => { const p = prog(e.id); return `
+        <div class="prog-row" data-mode="${e.id}">
+          <span class="nm">${esc(e.prenom)}</span>
           <span class="prog-bar"><i style="width:${p.t ? Math.round(p.d / p.t * 100) : 0}%"></i></span>
           <span class="ct">${p.d}/${p.t}</span><span class="go">▶</span>
-        </div>`).join('')}
+        </div>`; }).join('')}
     </div>
 
     <div class="section-title">Prochains rappels</div>
@@ -737,8 +757,8 @@ function renderGarde(el) {
     <div class="section-title">🎒 Le sac de transition ${reste ? '· ' + reste + ' à préparer' : '· prêt ✓'}</div>
     <div class="card">
       <p class="sub">Ce qui doit suivre les enfants à chaque échange. Coche en préparant le sac, puis réinitialise pour la prochaine fois.</p>
-      <div class="list">${data.transition.map((it) => `<div class="item ${it.fait ? 'done' : ''}" data-id="${it.id}"><span class="check">${it.fait ? '✓' : ''}</span><span class="label">${esc(it.nom)}</span><span class="tag ${whoClass[it.qui]}">${esc(whoLabel[it.qui])}</span><button class="x" data-act="del">✕</button></div>`).join('')}</div>
-      <div class="field-row" style="margin-top:12px"><input class="input" id="tr-nom" placeholder="Ajouter une affaire…" autocomplete="off" enterkeyhint="done" /><select class="select" id="tr-qui"><option value="deux">Les deux</option><option value="grand">${esc(data.reglages.grand)}</option><option value="petit">${esc(data.reglages.petit)}</option></select></div>
+      <div class="list">${data.transition.map((it) => `<div class="item ${it.fait ? 'done' : ''}" data-id="${it.id}"><span class="check">${it.fait ? '✓' : ''}</span><span class="label">${esc(it.nom)}</span><span class="tag">${esc(quiLabel(it.qui))}</span><button class="x" data-act="del">✕</button></div>`).join('')}</div>
+      <div class="field-row" style="margin-top:12px"><input class="input" id="tr-nom" placeholder="Ajouter une affaire…" autocomplete="off" enterkeyhint="done" /><select class="select" id="tr-qui">${quiOptions()}</select></div>
       <div class="btn-row"><button class="btn btn-mini" id="tr-add">Ajouter</button><button class="btn btn-mini btn-primary" id="tr-reset">↻ Réinitialiser pour le prochain échange</button></div>
     </div>`;
 
@@ -775,17 +795,17 @@ function renderGarde(el) {
    FAMILLE — routines par enfant + mode enfant + rappels + pense-bête
    ============================================================ */
 function renderFamille(el) {
+  if (!data.enfants.some((e) => e.id === familleChild)) familleChild = data.enfants[0] ? data.enfants[0].id : '';
   const child = familleChild;
-  const childName = child === 'petit' ? data.reglages.petit : data.reglages.grand;
+  const childNm = childName(child);
   const rappels = [...data.rappels].sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'));
   const ti = todayISO();
 
   el.innerHTML = `
     <div class="seg">
-      <button data-fc="petit" class="${child === 'petit' ? 'on' : ''}">👧 ${esc(data.reglages.petit)}</button>
-      <button data-fc="grand" class="${child === 'grand' ? 'on' : ''}">🧒 ${esc(data.reglages.grand)}</button>
+      ${data.enfants.map((e) => `<button data-fc="${e.id}" class="${child === e.id ? 'on' : ''}">🧒 ${esc(e.prenom)}</button>`).join('')}
     </div>
-    <button class="btn btn-accent btn-block" id="f-mode" style="margin-bottom:14px">▶️ Mode enfant — ${esc(childName)} (grand écran à pictos)</button>
+    <button class="btn btn-accent btn-block" id="f-mode" style="margin-bottom:14px">▶️ Mode enfant — ${esc(childNm)} (grand écran à pictos)</button>
     <div class="card">
       <h2>☀️ Routine du matin</h2>
       <div class="list" data-moment="matin">${routineItems(child, 'matin')}</div>
@@ -873,7 +893,7 @@ function openModeEnfant(child) { renderModeEnfant(child, moment()); }
 function renderModeEnfant(child, mom) {
   closeOverlay();
   const list = data.routines[child][mom];
-  const name = child === 'petit' ? data.reglages.petit : data.reglages.grand;
+  const name = childName(child);
   const allDone = list.length && list.every((x) => x.fait);
   const ov = document.createElement('div'); ov.className = 'overlay';
   ov.innerHTML = `
@@ -900,11 +920,12 @@ function openReglages() {
   ov.innerHTML = `
     <div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>Réglages & plus</h2></div>
     <div class="overlay-body">
-      <div class="set-section"><h3>Prénoms des enfants</h3>
+      <div class="set-section"><h3>👧🧒 Mes enfants</h3>
         <div class="card">
-          <div class="field-row"><input class="input" id="set-petit" value="${esc(data.reglages.petit)}" placeholder="Le petit (4 ans)" /></div>
-          <div class="field-row"><input class="input" id="set-grand" value="${esc(data.reglages.grand)}" placeholder="Le grand (10 ans)" /></div>
-          <button class="btn btn-primary btn-block" id="set-save">Enregistrer</button>
+          ${data.enfants.map((e) => `<div class="field-row" data-enf="${e.id}"><input class="input enf-nom" value="${esc(e.prenom)}" placeholder="Prénom" />${data.enfants.length > 1 ? `<button class="btn btn-mini" data-enfdel style="flex:0 0 auto;color:var(--danger)">✕</button>` : ''}</div>`).join('')}
+          <button class="btn btn-mini btn-block" id="enf-save">Enregistrer les prénoms</button>
+          <div class="divider"></div>
+          <div class="field-row"><input class="input" id="enf-new" placeholder="Ajouter un enfant…" autocomplete="off" /><button class="btn btn-primary" id="enf-add">＋</button></div>
         </div>
       </div>
       <div class="set-section"><h3>📇 Contacts utiles</h3>
@@ -943,7 +964,9 @@ function openReglages() {
     </div>`;
   document.body.appendChild(ov);
   ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
-  ov.querySelector('#set-save').addEventListener('click', () => { const p = ov.querySelector('#set-petit').value.trim(), g = ov.querySelector('#set-grand').value.trim(); if (p) data.reglages.petit = p; if (g) data.reglages.grand = g; save(); toast('Prénoms enregistrés'); openReglages(); });
+  ov.querySelector('#enf-save').addEventListener('click', () => { ov.querySelectorAll('[data-enf]').forEach((row) => { const e = data.enfants.find((x) => x.id === row.dataset.enf); const v = row.querySelector('.enf-nom').value.trim(); if (e && v) e.prenom = v; }); save(); toast('Enregistré ✓'); openReglages(); });
+  ov.querySelector('#enf-add').addEventListener('click', () => { const v = ov.querySelector('#enf-new').value.trim(); if (!v) return; seedEnfant(v); save(); openReglages(); });
+  ov.querySelectorAll('[data-enf] [data-enfdel]').forEach((b) => b.addEventListener('click', () => { const id = b.closest('[data-enf]').dataset.enf; confirmDialog('Supprimer cet enfant et ses données (routines, santé…) ?', () => { data.enfants = data.enfants.filter((e) => e.id !== id); delete data.routines[id]; delete data.sante[id]; delete data.recompenses[id]; if (familleChild === id) familleChild = data.enfants[0] ? data.enfants[0].id : ''; save(); openReglages(); }, { danger: true, yes: 'Supprimer' }); }));
   ov.querySelector('#ct-add').addEventListener('click', () => { const nom = ov.querySelector('#ct-nom').value.trim(); if (!nom) { toast('Indique au moins un nom'); return; } data.contacts.push({ id: uid(), nom, role: ov.querySelector('#ct-role').value.trim(), tel: ov.querySelector('#ct-tel').value.trim() }); save(); openReglages(); });
   ov.querySelectorAll('[data-cid]').forEach((row) => row.querySelector('[data-delc]').addEventListener('click', () => { data.contacts = data.contacts.filter((x) => x.id !== row.dataset.cid); save(); openReglages(); }));
   ov.querySelector('#bk-export').addEventListener('click', exportData);
@@ -993,12 +1016,12 @@ function activitesCardHtml() {
   for (let j = 0; j < 7; j++) {
     const acts = data.activites.filter((a) => a.jour === j).sort((a, b) => (a.heure || '').localeCompare(b.heure || ''));
     if (!acts.length) continue;
-    body += `<div class="rayon-title">${cap(JOURS[j])}</div>` + acts.map((a) => `<div class="item" data-actid="${a.id}"><span class="label">${a.heure ? `<b>${esc(a.heure)}</b> · ` : ''}${esc(a.nom)}</span><span class="tag ${whoClass[a.qui] || ''}">${esc(whoLabel[a.qui] || '')}</span><button class="x" data-actdel>✕</button></div>`).join('');
+    body += `<div class="rayon-title">${cap(JOURS[j])}</div>` + acts.map((a) => `<div class="item" data-actid="${a.id}"><span class="label">${a.heure ? `<b>${esc(a.heure)}</b> · ` : ''}${esc(a.nom)}</span><span class="tag">${esc(quiLabel(a.qui))}</span><button class="x" data-actdel>✕</button></div>`).join('');
   }
   if (!body) body = `<div class="empty"><span class="e">📆</span>Ajoute les activités récurrentes des enfants (sport, musique, école…).</div>`;
   return `<div class="section-title">📆 Activités de la semaine</div><div class="card">${body}
     <div class="field-row" style="margin-top:12px"><select class="select" id="ac-jour">${JOURS.map((d, i) => `<option value="${i}">${cap(d)}</option>`).join('')}</select><input class="input" id="ac-heure" type="time" /></div>
-    <div class="field-row"><input class="input" id="ac-nom" placeholder="Activité (ex. Foot)" /><select class="select" id="ac-qui"><option value="deux">Les 2</option><option value="grand">${esc(data.reglages.grand)}</option><option value="petit">${esc(data.reglages.petit)}</option></select></div>
+    <div class="field-row"><input class="input" id="ac-nom" placeholder="Activité (ex. Foot)" /><select class="select" id="ac-qui">${quiOptions()}</select></div>
     <button class="btn btn-block" id="ac-add">Ajouter l'activité</button></div>`;
 }
 function wireActivites(scope) {
@@ -1019,10 +1042,10 @@ function wireAnniversaires(scope) {
   scope.querySelectorAll('[data-annid]').forEach((row) => row.querySelector('[data-anndel]').addEventListener('click', () => { data.anniversaires = data.anniversaires.filter((x) => x.id !== row.dataset.annid); save(); render(); }));
 }
 
-function santeButtonHtml(child) { return `<button class="btn btn-block" id="f-sante" style="margin-top:4px;margin-bottom:14px">🩺 Carnet de santé — ${esc(child === 'petit' ? data.reglages.petit : data.reglages.grand)}</button>`; }
+function santeButtonHtml(child) { return `<button class="btn btn-block" id="f-sante" style="margin-top:4px;margin-bottom:14px">🩺 Carnet de santé — ${esc(childName(child))}</button>`; }
 function openSante(child) {
   closeOverlay();
-  const s = data.sante[child]; const name = child === 'petit' ? data.reglages.petit : data.reglages.grand;
+  const s = data.sante[child]; const name = childName(child);
   const ov = document.createElement('div'); ov.className = 'overlay';
   ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>←</button><h2>🩺 ${esc(name)}</h2></div>
     <div class="overlay-body">
@@ -1154,14 +1177,14 @@ function openLiaison() {
 function openSitter() {
   closeOverlay();
   const acts = data.activites.filter((a) => a.jour === todayDow()).sort((a, b) => (a.heure || '').localeCompare(b.heure || ''));
-  const childBlock = (c) => { const s = data.sante[c]; const nom = c === 'petit' ? data.reglages.petit : data.reglages.grand; return `<div class="section-title">${esc(nom)}</div><div class="card">${s.allergies ? `<p style="margin:0 0 8px"><b>⚠️ Allergies :</b> ${esc(s.allergies)}</p>` : ''}${s.traitements ? `<p style="margin:0 0 8px"><b>💊 Traitement :</b> ${esc(s.traitements)}</p>` : ''}<div class="muted" style="font-size:13px;margin-bottom:6px">Routine du soir</div><div class="list">${data.routines[c].soir.map((it) => `<div class="item"><span class="label">${pictoFor(it.texte)} ${esc(it.texte)}</span></div>`).join('')}</div></div>`; };
+  const childBlock = (c) => { const s = data.sante[c]; const nom = childName(c); return `<div class="section-title">${esc(nom)}</div><div class="card">${s.allergies ? `<p style="margin:0 0 8px"><b>⚠️ Allergies :</b> ${esc(s.allergies)}</p>` : ''}${s.traitements ? `<p style="margin:0 0 8px"><b>💊 Traitement :</b> ${esc(s.traitements)}</p>` : ''}<div class="muted" style="font-size:13px;margin-bottom:6px">Routine du soir</div><div class="list">${data.routines[c].soir.map((it) => `<div class="item"><span class="label">${pictoFor(it.texte)} ${esc(it.texte)}</span></div>`).join('')}</div></div>`; };
   const contacts = data.contacts.map((c) => `<div class="item"><span class="label"><b>${esc(c.nom)}</b>${c.role ? ' · ' + esc(c.role) : ''}${c.tel ? `<br><a class="tel-link" href="tel:${esc(c.tel)}">📞 ${esc(c.tel)}</a>` : ''}</span></div>`).join('');
   const ov = document.createElement('div'); ov.className = 'overlay';
   ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>🧑‍🍼 Mode baby-sitter</h2></div>
     <div class="overlay-body">
       ${data.reglages.consignesSitter ? `<div class="jbut">📋 ${esc(data.reglages.consignesSitter)}</div>` : ''}
       ${acts.length ? `<div class="section-title">Aujourd'hui</div><div class="card"><div class="list">${acts.map((a) => `<div class="item"><span class="label">📆 ${a.heure ? '<b>' + esc(a.heure) + '</b> · ' : ''}${esc(a.nom)}</span></div>`).join('')}</div></div>` : ''}
-      ${childBlock('petit')}${childBlock('grand')}
+      ${data.enfants.map((e) => childBlock(e.id)).join('')}
       <div class="section-title">📞 Contacts utiles</div>
       <div class="card"><div class="list">${contacts || '<div class="empty">Ajoute des contacts dans les Réglages.</div>'}</div></div>
       <p class="muted" style="text-align:center;font-size:12px">Pour modifier : Famille (🩺), Réglages (consignes, contacts) et Garde.</p>
@@ -1185,7 +1208,7 @@ function wireVacances(scope) {
 }
 
 function recompensesCardHtml(child) {
-  const r = data.recompenses[child]; const nom = child === 'petit' ? data.reglages.petit : data.reglages.grand;
+  const r = data.recompenses[child]; const nom = childName(child);
   const stars = '⭐'.repeat(Math.min(r.etoiles, r.objectif)) + '▫️'.repeat(Math.max(0, r.objectif - r.etoiles));
   const atteint = r.etoiles >= r.objectif;
   return `<div class="section-title">⭐ Récompenses — ${esc(nom)}</div><div class="card">
