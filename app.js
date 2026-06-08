@@ -394,7 +394,7 @@ function renderAccueil(el) {
     <div class="card">
       <h2>🍽️ Ce soir</h2>
       ${repas
-        ? `<div class="item"><span class="label">${esc(repas)}</span>${m.rid ? `<button class="btn btn-mini" id="d-cart">🛒 Ingrédients</button>` : ''}<button class="btn btn-mini btn-ghost" id="d-dice">🎲</button></div>`
+        ? `<div class="item">${m.rid ? `<button class="btn-ghost" id="d-recipe" style="font-size:16px;font-weight:600;padding:0;text-align:left;flex:1;color:var(--ink)">${esc(repas)} <span style="font-size:13px;color:var(--primary)">▸ recette</span></button>` : `<span class="label">${esc(repas)}</span>`}${m.rid ? `<button class="btn btn-mini" id="d-cart">🛒 Ingrédients</button>` : ''}<button class="btn btn-mini btn-ghost" id="d-dice">🎲</button></div>`
         : `<button class="btn btn-accent btn-block" id="d-random">🎲 Qu'est-ce qu'on mange ?</button>`}
     </div>
 
@@ -435,6 +435,8 @@ function renderAccueil(el) {
   const pickTonight = () => { const r = data.recettes[Math.floor(Math.random() * data.recettes.length)]; data.menu[ti] = Object.assign({}, data.menu[ti], { meal: r.nom, rid: r.id }); save(); renderAccueil(el); toast('🎲 Ce soir : ' + r.emoji + ' ' + r.nom); };
   if (dr) dr.addEventListener('click', pickTonight);
   if (dd) dd.addEventListener('click', pickTonight);
+  const drec = el.querySelector('#d-recipe');
+  if (drec) drec.addEventListener('click', () => openRecipeDetail(m.rid, 'book'));
   const dc = el.querySelector('#d-cart');
   if (dc) dc.addEventListener('click', () => addRecetteToCourses(ti, 'soir'));
   const av = accueilTodayHtml(); if (av) el.insertAdjacentHTML('beforeend', av);
