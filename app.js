@@ -440,7 +440,7 @@ function renderAccueil(el) {
   const dc = el.querySelector('#d-cart');
   if (dc) dc.addEventListener('click', () => addRecetteToCourses(ti, 'soir'));
   const av = accueilTodayHtml(); if (av) el.insertAdjacentHTML('beforeend', av);
-  el.insertAdjacentHTML('beforeend', `<div class="section-title">Outils</div><div class="quick"><button id="ac-guide"><span class="e">📖</span>Guide du parent</button><button id="ac-dep"><span class="e">💶</span>Dépenses partagées</button><button id="ac-sitter"><span class="e">🧑‍🍼</span>Mode baby-sitter</button><button id="ac-idee"><span class="e">💡</span>Idée anti-écran</button><button id="ac-budget"><span class="e">💰</span>Budget du mois</button><button id="ac-journal"><span class="e">📔</span>Livre de bord</button><button id="ac-frigo"><span class="e">📺</span>Écran du jour</button><button id="ac-minuteur"><span class="e">⏱️</span>Minuteur</button></div><div class="card" style="margin-top:14px"><b>💛 Conseil du jour</b><br><span class="muted">${esc(conseilDuJour())}</span></div><div class="card"><b>🎯 Le défi de la semaine</b><br><span class="muted">${esc(defiSemaine())}</span></div>`);
+  el.insertAdjacentHTML('beforeend', `<div class="section-title">Outils</div><div class="quick"><button id="ac-guide"><span class="e">📖</span>Guide du parent</button><button id="ac-dep"><span class="e">💶</span>Dépenses partagées</button><button id="ac-sitter"><span class="e">🧑‍🍼</span>Mode baby-sitter</button><button id="ac-idee"><span class="e">💡</span>Idée anti-écran</button><button id="ac-budget"><span class="e">💰</span>Budget du mois</button><button id="ac-journal"><span class="e">📔</span>Livre de bord</button><button id="ac-frigo"><span class="e">📺</span>Écran du jour</button><button id="ac-minuteur"><span class="e">⏱️</span>Minuteur</button><button id="ac-barkley" style="grid-column:1/-1;flex-direction:row;justify-content:center;gap:10px;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff"><span style="font-size:26px">🧠</span><span style="font-size:15px;font-weight:700">Méthode Barkley</span></button></div><div class="card" style="margin-top:14px"><b>💛 Conseil du jour</b><br><span class="muted">${esc(conseilDuJour())}</span></div><div class="card"><b>🎯 Le défi de la semaine</b><br><span class="muted">${esc(defiSemaine())}</span></div>`);
   el.querySelector('#ac-guide').addEventListener('click', openGuide);
   el.querySelector('#ac-dep').addEventListener('click', openDepenses);
   el.querySelector('#ac-sitter').addEventListener('click', openSitter);
@@ -449,6 +449,7 @@ function renderAccueil(el) {
   el.querySelector('#ac-journal').addEventListener('click', openJournal);
   el.querySelector('#ac-frigo').addEventListener('click', openFrigo);
   el.querySelector('#ac-minuteur').addEventListener('click', openMinuteur);
+  el.querySelector('#ac-barkley').addEventListener('click', openBarkley);
   injectWeather(el);
   const lastEx = data.reglages.lastExport;
   const hasData = data.courses.length || data.journal.length || data.rappels.length || Object.keys(data.presence).length || Object.keys(data.menu).length;
@@ -2092,6 +2093,131 @@ function openMinuteur() {
     ov.querySelectorAll('[data-sec]').forEach((b) => b.addEventListener('click', () => setTime(+b.dataset.sec)));
   }
   paint();
+}
+
+function openBarkley() {
+  closeOverlay();
+  let bkComp = 0, bkCorr = 0;
+  const ov = document.createElement('div'); ov.className = 'overlay'; document.body.appendChild(ov);
+
+  const PRINCIPES = [
+    { e: '🕐', t: 'Rends le temps visible', d: "Les enfants avec TDAH vivent dans un «présent perpétuel». Utilise le minuteur visuel, une horloge analogique, le planning affiché. Le temps abstrait n'existe pas pour eux." },
+    { e: '✍️', t: 'Externalise l\'information', d: "Leur mémoire de travail est limitée. Écris les règles, tâches et routines sur papier ou tableau. Ne compte jamais sur leur souvenir." },
+    { e: '⚡', t: 'Rapproche les conséquences', d: "'Ce soir' ou 'cette semaine' = trop loin. Les récompenses et conséquences doivent être quasi-immédiates (moins de 30 min). Sinon elles n'ont aucun effet." },
+    { e: '🌟', t: 'Augmente la motivation', d: "Leur motivation interne est structurellement plus faible. Il faut plus de récompenses externes, plus variées, plus fréquentes. C'est neurologique, pas de la mauvaise volonté." },
+    { e: '🔄', t: 'Construis des routines fixes', d: "La régularité compense le déficit d'auto-régulation. Mêmes horaires, mêmes rituels, même ordre tous les jours. La prévisibilité est un vrai médicament." },
+    { e: '💬', t: 'Parle moins, agis plus', d: "Une instruction courte, claire, une seule fois. Puis agis (conséquence ou aide immédiate). Les longues explications aggravent la situation — leur cerveau décroche." }
+  ];
+
+  const QUAND_ALORS = [
+    { q: 'tu as rangé ta chambre', a: 'tu peux regarder la télé' },
+    { q: 'tes devoirs sont finis', a: 'on joue ensemble 15 min' },
+    { q: "tu t'es habillé(e) seul(e)", a: 'tu choisis le repas du soir' },
+    { q: 'tu as mangé assis jusqu\'à la fin', a: 'tu as le dessert' },
+    { q: "tu t'es brossé les dents sans rappel", a: 'tu gagnes une étoile' },
+    { q: 'tu as parlé calmement', a: "on t'écoute tout de suite" },
+    { q: 'tu as fait ta routine du matin', a: 'on part sereinement' },
+    { q: "tu as accepté le 'non' sans crise", a: 'la prochaine demande est prioritaire' }
+  ];
+
+  const CRISE = [
+    { n: '1', t: 'Garde ton calme', d: "Respire. Ta propre régulation est le 1er outil. Si tu t'énerves, la crise s'amplifie. Baisse la voix." },
+    { n: '2', t: 'Réduis les mots', d: '"Je vois que tu es en colère. Je suis là." C\'est tout. Pas d\'argumentation, pas d\'explication, pas de négociation.' },
+    { n: '3', t: 'Sécurise', d: "Éloigne les objets dangereux. Ne bloque pas physiquement sauf danger réel. Reste à proximité." },
+    { n: '4', t: 'Attends le pic', d: "La crise a un pic puis descend naturellement. Tu ne peux pas l'abréger. Reste calme et présent." },
+    { n: '5', t: 'Reconnecte', d: '"Tu vas mieux ? Viens, on fait X ensemble." Pas de punition immédiate après une crise — la punition différée ne fonctionne pas.' },
+    { n: '6', t: 'Débriefing (30 min après)', d: '"Qu\'est-ce qui s\'est passé ? Qu\'est-ce qu\'on peut faire différemment ?" Sans émotion, sans accusation.' }
+  ];
+
+  const JOURNEE = [
+    { e: '⏰', t: 'Lever + routine matin', d: 'Même ordre. Checklist visuelle affichée (pas dans la tête).' },
+    { e: '🎒', t: 'Départ école', d: 'Sac préparé la veille. Vérification en 30 sec.' },
+    { e: '🏠', t: 'Retour maison', d: 'Collation AVANT les devoirs. 20 min de décompression libre.' },
+    { e: '📚', t: 'Devoirs', d: 'Tranches de 15-20 min max. Pause entre chaque. Pas à table.' },
+    { e: '🍽️', t: 'Dîner + bain', d: 'Moment calme. Écrans éteints 30 min avant le bain.' },
+    { e: '🛏️', t: 'Rituel dodo', d: 'Même heure. Histoire. Lumière tamisée. Zéro stimulation.' }
+  ];
+
+  function ratioCalc() {
+    const r = bkCorr > 0 ? (bkComp / bkCorr).toFixed(1) : (bkComp > 0 ? '∞' : '—');
+    const ok = bkCorr === 0 ? bkComp > 0 : bkComp / bkCorr >= 3;
+    return { r, ok };
+  }
+
+  function refreshRatio() {
+    const { r, ok } = ratioCalc();
+    const box = ov.querySelector('#bk-box');
+    if (!box) return;
+    box.style.background = ok ? '#dcfce7' : '#fef3c7';
+    const num = box.querySelector('.bk-num'); if (num) { num.textContent = 'Ratio ' + r + ':1'; num.style.color = ok ? '#16a34a' : '#d97706'; }
+    const msg = box.querySelector('.bk-msg'); if (msg) { msg.textContent = ok ? '✅ Excellent ! Tu es dans la zone positive.' : '⚠️ Objectif : 3 compliments pour 1 correction'; msg.style.color = ok ? '#16a34a' : '#d97706'; }
+  }
+
+  function draw() {
+    const { r, ok } = ratioCalc();
+    ov.innerHTML = `
+      <div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>🧠 Méthode Barkley</h2></div>
+      <div class="overlay-body">
+
+        <div class="card" style="border-left:4px solid #2563eb">
+          <b style="font-size:16px">C'est quoi ?</b>
+          <p style="margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.55">La méthode du Dr <b>Russell Barkley</b> (neuropsychologue américain) est la référence mondiale pour les enfants <b>TDAH</b>, hyperactifs, impulsifs ou inattentifs. Principe fondateur : <b>ces enfants ne manquent pas de volonté — ils manquent de régulation neurologique.</b> Les 6 outils ci-dessous compensent ce déficit de l'extérieur, sans médicament ni punition excessive.</p>
+        </div>
+
+        <details style="margin-bottom:14px">
+          <summary style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;cursor:pointer;padding:4px 0">▸ Les 6 principes fondamentaux</summary>
+          ${PRINCIPES.map((p) => `<div class="card" style="margin-top:10px"><div style="display:flex;gap:10px;align-items:flex-start"><span style="font-size:26px;flex-shrink:0">${p.e}</span><div><b style="font-size:15px">${esc(p.t)}</b><br><span class="muted" style="font-size:13px;line-height:1.5">${esc(p.d)}</span></div></div></div>`).join('')}
+        </details>
+
+        <div class="section-title">🔢 Compteur compliments / corrections</div>
+        <div class="card">
+          <p class="muted" style="font-size:13px;margin:0 0 12px">Barkley recommande <b>au minimum 3 compliments pour 1 correction</b>. En dessous, l'enfant perçoit son environnement comme hostile et se ferme. Compte en temps réel :</p>
+          <div style="display:flex;gap:10px;margin-bottom:12px">
+            <button id="bk-comp" class="btn btn-primary" style="flex:1;padding:14px 10px;font-size:14px;flex-direction:column;display:flex;align-items:center;gap:4px">👏 Compliment<span id="bk-cn" style="font-size:28px;font-weight:800;line-height:1">${bkComp}</span></button>
+            <button id="bk-corr" class="btn" style="flex:1;padding:14px 10px;font-size:14px;flex-direction:column;display:flex;align-items:center;gap:4px;background:#fee2e2;color:#991b1b">✋ Correction<span id="bk-cn2" style="font-size:28px;font-weight:800;line-height:1">${bkCorr}</span></button>
+          </div>
+          <div id="bk-box" style="text-align:center;padding:12px;border-radius:12px;background:${ok ? '#dcfce7' : '#fef3c7'}">
+            <div class="bk-num" style="font-size:26px;font-weight:800;color:${ok ? '#16a34a' : '#d97706'}">Ratio ${r}:1</div>
+            <div class="bk-msg" style="font-size:13px;color:${ok ? '#16a34a' : '#d97706'}">${ok ? '✅ Excellent ! Tu es dans la zone positive.' : '⚠️ Objectif : 3 compliments pour 1 correction'}</div>
+          </div>
+          <button id="bk-reset" class="btn btn-mini btn-ghost btn-block" style="margin-top:8px">↺ Remettre à zéro</button>
+        </div>
+
+        <div class="section-title">⏱️ La règle des 20 secondes</div>
+        <div class="card">
+          <p class="muted" style="font-size:13px;margin:0 0 10px">Comment donner une instruction qui sera suivie :</p>
+          <div class="list">${["1. Approche-toi physiquement. Jamais de cri depuis l'autre pièce.", "2. Attends le contact visuel. Dis son prénom si besoin.", "3. Une instruction courte et positive : «Range tes chaussures» (pas «Arrête de…»).", "4. Attends 20 secondes en silence. Compte mentalement. Ne répète pas.", "5. Si pas suivi : guide physiquement avec calme, ou annonce la conséquence.", "6. Règle absolue : ne jamais répéter plus d'une fois."].map((s) => `<div class="item"><span class="label" style="font-size:14px;line-height:1.5">${esc(s)}</span></div>`).join('')}</div>
+        </div>
+
+        <div class="section-title">💬 Phrases "Quand… Alors…"</div>
+        <div class="card">
+          <p class="muted" style="font-size:13px;margin:0 0 10px">Remplace les ordres par cette formule. L'enfant garde le contrôle, la récompense est immédiate et prévisible.</p>
+          <div class="list">${QUAND_ALORS.map((w) => `<div class="item"><span class="label" style="font-size:13px;line-height:1.6">Quand <b>${esc(w.q)}</b>,<br>alors <b style="color:var(--primary)">${esc(w.a)}</b></span></div>`).join('')}</div>
+        </div>
+
+        <details style="margin-bottom:14px">
+          <summary style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;cursor:pointer;padding:4px 0">▸ Script de gestion de crise (6 étapes)</summary>
+          ${CRISE.map((s) => `<div class="card" style="margin-top:10px;border-left:3px solid var(--danger)"><div style="display:flex;gap:10px;align-items:flex-start"><span style="font-size:20px;font-weight:800;color:var(--danger);min-width:24px">${s.n}</span><div><b>${esc(s.t)}</b><br><span class="muted" style="font-size:13px;line-height:1.5">${esc(s.d)}</span></div></div></div>`).join('')}
+        </details>
+
+        <div class="section-title">📅 Structure de journée recommandée</div>
+        <div class="card">
+          <p class="muted" style="font-size:13px;margin:0 0 10px">6 zones stables. La prévisibilité réduit les comportements difficiles de 30 à 50 %.</p>
+          <div class="list">${JOURNEE.map((z) => `<div class="item"><span style="font-size:22px;margin-right:12px;flex-shrink:0">${z.e}</span><span class="label"><b>${esc(z.t)}</b><br><span class="muted" style="font-size:12px">${esc(z.d)}</span></span></div>`).join('')}</div>
+        </div>
+
+        <div class="card" style="background:var(--primary-soft);border:0;margin-bottom:8px">
+          <b style="color:var(--primary-d)">📚 Pour aller plus loin</b>
+          <p style="margin:6px 0 0;color:var(--primary-d);font-size:13px">Livre : <i>"Taking Charge of ADHD"</i> — Dr Russell Barkley (ed. Guilford Press). Vidéos gratuites sur YouTube : recherche <b>"Russell Barkley ADHD"</b>. Association française : <b>HyperSupers TDAH France</b>.</p>
+        </div>
+      </div>`;
+
+    ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
+    ov.querySelector('#bk-comp').addEventListener('click', () => { bkComp++; const el = ov.querySelector('#bk-cn'); if (el) el.textContent = bkComp; refreshRatio(); });
+    ov.querySelector('#bk-corr').addEventListener('click', () => { bkCorr++; const el = ov.querySelector('#bk-cn2'); if (el) el.textContent = bkCorr; refreshRatio(); });
+    ov.querySelector('#bk-reset').addEventListener('click', () => { bkComp = 0; bkCorr = 0; draw(); });
+  }
+  draw();
 }
 
 function openFrigo() {
