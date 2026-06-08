@@ -1933,22 +1933,128 @@ function openBilan() {
   ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
 }
 
+const MINUTEUR_PRESETS = [
+  { cat: '🥚 Cuisine', items: [
+    { label: "Œuf à la coque",    sec: 180 },
+    { label: "Œuf mollet",        sec: 360 },
+    { label: "Œuf dur",           sec: 600 },
+    { label: "Pâtes al dente",    sec: 480 },
+    { label: "Pâtes bien cuites", sec: 660 },
+    { label: "Riz blanc",         sec: 720 },
+    { label: "Riz complet",       sec: 1200 },
+    { label: "Légumes vapeur",    sec: 600 },
+    { label: "Pommes de terre",   sec: 1200 },
+    { label: "Poisson au four",   sec: 900 },
+    { label: "Pizza surgelée",    sec: 840 },
+    { label: "Gâteau au yaourt",  sec: 1800 }
+  ]},
+  { cat: '🧒 Enfants', items: [
+    { label: "Brossage de dents", sec: 120 },
+    { label: "Bain",              sec: 600 },
+    { label: "Devoirs (petits)",  sec: 900 },
+    { label: "Devoirs (grands)",  sec: 1200 },
+    { label: "Temps d'écran",     sec: 1800 },
+    { label: "Coin / réflexion",  sec: 300 },
+    { label: "Calme avant dodo",  sec: 600 },
+    { label: "Histoire du soir",  sec: 600 }
+  ]},
+  { cat: '🏠 Maison', items: [
+    { label: "Ranger sa chambre", sec: 600 },
+    { label: "Nettoyage express", sec: 900 },
+    { label: "Grand ménage",      sec: 1800 },
+    { label: "Machine à laver",   sec: 5400 },
+    { label: "Sèche-linge",       sec: 3600 }
+  ]},
+  { cat: '🧘 Pause', items: [
+    { label: "Respiration 4-4-6", sec: 60 },
+    { label: "Micro pause",       sec: 300 },
+    { label: "Décompression",     sec: 600 },
+    { label: "Sieste courte",     sec: 1200 }
+  ]}
+];
+
 function openMinuteur() {
   closeOverlay(); clearInterval(minTimer);
-  let remaining = 120, running = false;
-  const fmt = (s) => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  let remaining = 0, running = false, total = 0;
+  let customMin = 5, customSec = 0;
+  let activeCat = 0;
+  const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   const ov = document.createElement('div'); ov.className = 'overlay'; document.body.appendChild(ov);
-  function tick() { if (remaining > 0) { remaining--; const d = ov.querySelector('#mt-disp'); if (d) d.textContent = fmt(remaining); if (remaining === 0) { clearInterval(minTimer); running = false; if (navigator.vibrate) navigator.vibrate([300, 150, 300]); toast('⏰ Temps écoulé !'); paint(); } } }
+
+  function setTime(s) { remaining = s; total = s; running = false; clearInterval(minTimer); paint(); }
+
+  function tick() {
+    if (remaining > 0) {
+      remaining--;
+      const d = ov.querySelector('#mt-disp'); if (d) d.textContent = fmt(remaining);
+      const bar = ov.querySelector('#mt-bar'); if (bar && total > 0) bar.style.width = (1 - remaining / total) * 100 + '%';
+      if (remaining === 0) { clearInterval(minTimer); running = false; if (navigator.vibrate) navigator.vibrate([400, 200, 400, 200, 400]); toast('⏰ Temps écoulé !'); paint(); }
+    }
+  }
+
   function paint() {
-    ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>⏲️ Minuteur</h2></div><div class="overlay-body">
-      <div style="text-align:center;margin:14px 0"><div id="mt-disp" style="font-size:70px;font-weight:800;color:var(--primary);line-height:1">${fmt(remaining)}</div></div>
-      <div class="chips" style="justify-content:center">${[1, 2, 3, 5, 10].map((m) => `<button class="chip" data-min="${m}">${m} min</button>`).join('')}</div>
-      <div class="btn-row" style="justify-content:center;margin-top:16px"><button class="btn btn-primary" id="mt-start">${running ? '⏸ Pause' : '▶ Démarrer'}</button><button class="btn" id="mt-reset">↻ Réinitialiser</button></div>
-      <p class="muted" style="text-align:center;margin-top:14px">Idéal pour « 2 min de brossage de dents » ou « 5 min pour ranger ». Ça vibre à la fin.</p></div>`;
+    const pct = total > 0 ? (1 - remaining / total) * 100 : 0;
+    const done = remaining === 0 && total > 0;
+    ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>⏱️ Minuteur</h2></div><div class="overlay-body">
+      <div style="text-align:center;padding:18px 0 10px">
+        <div id="mt-disp" style="font-size:76px;font-weight:800;color:${done ? 'var(--ok)' : 'var(--primary)'};line-height:1;letter-spacing:-2px;font-variant-numeric:tabular-nums">${fmt(remaining)}</div>
+        ${done ? '<div style="color:var(--ok);font-weight:700;margin-top:6px">✅ Temps écoulé !</div>' : ''}
+        <div style="background:var(--line);border-radius:4px;height:7px;margin:14px 0 12px;overflow:hidden"><div id="mt-bar" style="background:var(--primary);height:100%;width:${pct}%;transition:width .8s linear"></div></div>
+        <div class="btn-row" style="justify-content:center">
+          <button class="btn btn-primary" id="mt-start" style="min-width:140px;font-size:16px">${running ? '⏸ Pause' : (remaining > 0 && remaining < total ? '▶ Reprendre' : '▶ Démarrer')}</button>
+          <button class="btn" id="mt-reset" style="font-size:18px" title="Réinitialiser">↻</button>
+        </div>
+      </div>
+
+      <div class="section-title">⌛ Régler le temps manuellement</div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:center;gap:14px">
+          <div style="text-align:center">
+            <div class="muted" style="font-size:11px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">min</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="btn btn-mini" data-adj="m-" style="font-size:18px;padding:6px 13px">−</button>
+              <span id="mt-cmin" style="font-size:30px;font-weight:800;min-width:46px;text-align:center;font-variant-numeric:tabular-nums">${String(customMin).padStart(2, '0')}</span>
+              <button class="btn btn-mini" data-adj="m+" style="font-size:18px;padding:6px 13px">+</button>
+            </div>
+          </div>
+          <div style="font-size:34px;font-weight:800;padding-top:18px;color:var(--muted)">:</div>
+          <div style="text-align:center">
+            <div class="muted" style="font-size:11px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">sec</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="btn btn-mini" data-adj="s-" style="font-size:18px;padding:6px 13px">−</button>
+              <span id="mt-csec" style="font-size:30px;font-weight:800;min-width:46px;text-align:center;font-variant-numeric:tabular-nums">${String(customSec).padStart(2, '0')}</span>
+              <button class="btn btn-mini" data-adj="s+" style="font-size:18px;padding:6px 13px">+</button>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" id="mt-set" style="margin-top:14px">▶ Démarrer ce temps</button>
+      </div>
+
+      <div class="section-title">Suggestions</div>
+      <div class="chips" style="margin-bottom:10px">${MINUTEUR_PRESETS.map((c, i) => `<button class="chip ${i === activeCat ? 'on' : ''}" data-cat="${i}">${c.cat}</button>`).join('')}</div>
+      <div class="card"><div class="chips">${MINUTEUR_PRESETS[activeCat].items.map((p) => `<button class="chip" data-sec="${p.sec}" style="flex-direction:column;align-items:flex-start;line-height:1.3">${esc(p.label)}<br><span class="muted" style="font-size:11px">${fmt(p.sec)}</span></button>`).join('')}</div></div>
+    </div>`;
+
     ov.querySelector('[data-close]').addEventListener('click', () => { clearInterval(minTimer); closeOverlay(); render(); });
-    ov.querySelectorAll('[data-min]').forEach((b) => b.addEventListener('click', () => { remaining = +b.dataset.min * 60; running = false; clearInterval(minTimer); paint(); }));
-    ov.querySelector('#mt-start').addEventListener('click', () => { if (running) { running = false; clearInterval(minTimer); } else { if (remaining <= 0) remaining = 120; running = true; clearInterval(minTimer); minTimer = setInterval(tick, 1000); } paint(); });
-    ov.querySelector('#mt-reset').addEventListener('click', () => { running = false; clearInterval(minTimer); remaining = 120; paint(); });
+    ov.querySelector('#mt-start').addEventListener('click', () => {
+      if (running) { running = false; clearInterval(minTimer); }
+      else { if (remaining <= 0) { const t = customMin * 60 + customSec || 120; remaining = t; total = t; } running = true; clearInterval(minTimer); minTimer = setInterval(tick, 1000); }
+      paint();
+    });
+    ov.querySelector('#mt-reset').addEventListener('click', () => { running = false; clearInterval(minTimer); remaining = total; paint(); });
+    ov.querySelector('#mt-set').addEventListener('click', () => setTime(customMin * 60 + customSec || 60));
+
+    ov.querySelectorAll('[data-adj]').forEach((b) => b.addEventListener('click', () => {
+      const a = b.dataset.adj;
+      if (a === 'm+') customMin = Math.min(99, customMin + 1);
+      else if (a === 'm-') customMin = Math.max(0, customMin - 1);
+      else if (a === 's+') customSec = customSec >= 55 ? 0 : customSec + 5;
+      else if (a === 's-') customSec = customSec <= 0 ? 55 : customSec - 5;
+      const dm = ov.querySelector('#mt-cmin'); if (dm) dm.textContent = String(customMin).padStart(2, '0');
+      const ds = ov.querySelector('#mt-csec'); if (ds) ds.textContent = String(customSec).padStart(2, '0');
+    }));
+    ov.querySelectorAll('[data-cat]').forEach((b) => b.addEventListener('click', () => { activeCat = +b.dataset.cat; paint(); }));
+    ov.querySelectorAll('[data-sec]').forEach((b) => b.addEventListener('click', () => setTime(+b.dataset.sec)));
   }
   paint();
 }
