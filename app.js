@@ -438,7 +438,7 @@ function renderAccueil(el) {
   const dc = el.querySelector('#d-cart');
   if (dc) dc.addEventListener('click', () => addRecetteToCourses(ti, 'soir'));
   const av = accueilTodayHtml(); if (av) el.insertAdjacentHTML('beforeend', av);
-  el.insertAdjacentHTML('beforeend', `<div class="section-title">Outils</div><div class="quick"><button id="ac-guide"><span class="e">📖</span>Guide du parent</button><button id="ac-dep"><span class="e">💶</span>Dépenses partagées</button><button id="ac-sitter"><span class="e">🧑‍🍼</span>Mode baby-sitter</button><button id="ac-idee"><span class="e">💡</span>Idée anti-écran</button><button id="ac-budget"><span class="e">💰</span>Budget du mois</button><button id="ac-journal"><span class="e">📔</span>Livre de bord</button><button id="ac-frigo"><span class="e">📺</span>Écran du jour</button></div><div class="card" style="margin-top:14px"><b>💛 Conseil du jour</b><br><span class="muted">${esc(conseilDuJour())}</span></div><div class="card"><b>🎯 Le défi de la semaine</b><br><span class="muted">${esc(defiSemaine())}</span></div>`);
+  el.insertAdjacentHTML('beforeend', `<div class="section-title">Outils</div><div class="quick"><button id="ac-guide"><span class="e">📖</span>Guide du parent</button><button id="ac-dep"><span class="e">💶</span>Dépenses partagées</button><button id="ac-sitter"><span class="e">🧑‍🍼</span>Mode baby-sitter</button><button id="ac-idee"><span class="e">💡</span>Idée anti-écran</button><button id="ac-budget"><span class="e">💰</span>Budget du mois</button><button id="ac-journal"><span class="e">📔</span>Livre de bord</button><button id="ac-frigo"><span class="e">📺</span>Écran du jour</button><button id="ac-minuteur"><span class="e">⏱️</span>Minuteur</button></div><div class="card" style="margin-top:14px"><b>💛 Conseil du jour</b><br><span class="muted">${esc(conseilDuJour())}</span></div><div class="card"><b>🎯 Le défi de la semaine</b><br><span class="muted">${esc(defiSemaine())}</span></div>`);
   el.querySelector('#ac-guide').addEventListener('click', openGuide);
   el.querySelector('#ac-dep').addEventListener('click', openDepenses);
   el.querySelector('#ac-sitter').addEventListener('click', openSitter);
@@ -446,6 +446,7 @@ function renderAccueil(el) {
   el.querySelector('#ac-budget').addEventListener('click', openBudget);
   el.querySelector('#ac-journal').addEventListener('click', openJournal);
   el.querySelector('#ac-frigo').addEventListener('click', openFrigo);
+  el.querySelector('#ac-minuteur').addEventListener('click', openMinuteur);
   injectWeather(el);
   const lastEx = data.reglages.lastExport;
   const hasData = data.courses.length || data.journal.length || data.rappels.length || Object.keys(data.presence).length || Object.keys(data.menu).length;
