@@ -456,7 +456,7 @@ function renderAccueil(el) {
   el.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.go)));
   el.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => openModeEnfant(b.dataset.mode)));
   const dr = el.querySelector('#d-random'), dd = el.querySelector('#d-dice');
-  const pickTonight = () => { const r = data.recettes[Math.floor(Math.random() * data.recettes.length)]; data.menu[ti] = Object.assign({}, data.menu[ti], { meal: r.nom, rid: r.id }); save(); renderAccueil(el); toast('🎲 Ce soir : ' + r.emoji + ' ' + r.nom); };
+  const pickTonight = () => { const pool = data.recettes.filter((r) => !DESSERT_IDS.has(r.id)); const r = pool[Math.floor(Math.random() * pool.length)]; data.menu[ti] = Object.assign({}, data.menu[ti], { meal: r.nom, rid: r.id }); save(); renderAccueil(el); toast('🎲 Ce soir : ' + r.emoji + ' ' + r.nom); };
   if (dr) dr.addEventListener('click', pickTonight);
   if (dd) dd.addEventListener('click', pickTonight);
   const drec = el.querySelector('#d-recipe');
@@ -607,10 +607,14 @@ function renderRepas(el) {
       <p class="sub">Ajoute en une fois les ingrédients de tous les repas planifiés cette semaine à ta liste de courses.</p>
       <button class="btn btn-accent btn-block" id="w-allcart">Générer la liste de courses de la semaine</button>
     </div>
-    <button class="btn btn-primary btn-block" id="r-book" style="margin-bottom:14px">📖 Livre de recettes (${data.recettes.length} plats)</button>
-    <div class="section-title">Piocher une recette (remplit le prochain jour libre)</div>
+    <button class="btn btn-primary btn-block" id="r-book" style="margin-bottom:14px">📖 Livre de recettes (${data.recettes.filter((r) => !DESSERT_IDS.has(r.id)).length} plats · ${data.recettes.filter((r) => DESSERT_IDS.has(r.id)).length} desserts)</button>
+    <div class="section-title">🥘 Piocher un plat (remplit le prochain jour libre)</div>
     <div class="card">
-      <div class="chips">${data.recettes.map((r) => `<button class="chip" data-recette="${r.id}">${r.emoji} ${esc(r.nom)}</button>`).join('')}</div>
+      <div class="chips">${data.recettes.filter((r) => !DESSERT_IDS.has(r.id)).map((r) => `<button class="chip" data-recette="${r.id}">${r.emoji} ${esc(r.nom)}</button>`).join('')}</div>
+    </div>
+    <div class="section-title">🍰 Piocher un dessert</div>
+    <div class="card">
+      <div class="chips">${data.recettes.filter((r) => DESSERT_IDS.has(r.id)).map((r) => `<button class="chip" data-recette="${r.id}">${r.emoji} ${esc(r.nom)}</button>`).join('')}</div>
       <button class="btn btn-ghost" id="rc-toggle" style="margin-top:8px">➕ Ajouter ma recette</button>
       <div id="rc-form" ${showRecForm ? '' : 'hidden'} style="margin-top:8px">
         <input class="input" id="rc-nom" placeholder="Nom du plat (ex. Gratin de courgettes)" style="margin-bottom:8px" />
@@ -630,7 +634,7 @@ function renderRepas(el) {
   document.getElementById('w-prev').addEventListener('click', () => { weekRef = addDays(weekRef, -7); renderRepas(el); });
   document.getElementById('w-next').addEventListener('click', () => { weekRef = addDays(weekRef, 7); renderRepas(el); });
   document.getElementById('w-allcart').addEventListener('click', () => addWeekToCourses(start));
-  document.getElementById('r-random').addEventListener('click', () => { const r = data.recettes[Math.floor(Math.random() * data.recettes.length)]; data.menu[ti] = Object.assign({}, data.menu[ti], { meal: r.nom, rid: r.id }); save(); renderRepas(el); toast('🎲 Ce soir : ' + r.emoji + ' ' + r.nom); });
+  document.getElementById('r-random').addEventListener('click', () => { const pool = data.recettes.filter((r) => !DESSERT_IDS.has(r.id)); const r = pool[Math.floor(Math.random() * pool.length)]; data.menu[ti] = Object.assign({}, data.menu[ti], { meal: r.nom, rid: r.id }); save(); renderRepas(el); toast('🎲 Ce soir : ' + r.emoji + ' ' + r.nom); });
   document.getElementById('r-fill').addEventListener('click', () => fillWeek(start, el));
   document.getElementById('r-book').addEventListener('click', openRecipeBook);
   el.querySelectorAll('[data-recette]').forEach((b) => b.addEventListener('click', () => {
@@ -655,7 +659,7 @@ function renderRepas(el) {
   });
 }
 function fillWeek(start, el) {
-  const pool = data.recettes; let n = 0; let last = '';
+  const pool = data.recettes.filter((r) => !DESSERT_IDS.has(r.id)); let n = 0; let last = '';
   for (let i = 0; i < 7; i++) {
     const k = iso(addDays(start, i));
     if (data.menu[k] && data.menu[k].meal) continue;
@@ -689,53 +693,62 @@ function addWeekToCourses(start) {
 
 /* Sélecteur de recette (overlay tactile, remplace prompt) */
 function openRecipePicker(key, slot) {
-  let filter = '';
+  let filter = '', rpCat = 'plat';
   const m0 = data.menu[key] || {}; const cur = slot === 'soir' ? m0.meal : m0.midi;
   const ov = document.createElement('div'); ov.className = 'overlay';
   closeOverlay();
   ov.innerHTML = `
     <div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>Choisir un repas</h2></div>
     <div class="overlay-body">
-      <input class="input" id="rp-search" placeholder="Rechercher une recette…" autocomplete="off" />
+      <div class="chips" id="rp-cats" style="margin-bottom:10px">
+        <button class="chip on" data-rpcat="plat">🥘 Plats</button>
+        <button class="chip" data-rpcat="dessert">🍰 Desserts</button>
+        <button class="chip" data-rpcat="">Tout</button>
+      </div>
+      <input class="input" id="rp-search" placeholder="Rechercher…" autocomplete="off" />
       ${cur ? `<p class="muted" style="margin:10px 2px">Actuellement : <b>${esc(cur)}</b></p>` : ''}
-      <div class="list" id="rp-list" style="margin-top:8px">${recipeRowsHtml('')}</div>
+      <div class="list" id="rp-list" style="margin-top:8px">${recipeRowsHtml('', 'plat')}</div>
       <button class="btn btn-block" id="rp-clear" style="margin-top:14px;color:var(--danger)">✕ Vider ce repas</button>
     </div>`;
   document.body.appendChild(ov);
   const assign = (rec) => { const mm = data.menu[key] || {}; if (slot === 'soir') { mm.meal = rec.nom; mm.rid = rec.id; } else { mm.midi = rec.nom; mm.midiRid = rec.id; } data.menu[key] = mm; save(); closeOverlay(); render(); toast(rec.emoji + ' ' + rec.nom); };
   const wireRows = () => ov.querySelectorAll('.recipe').forEach((row) => { row.addEventListener('click', () => assign(data.recettes.find((x) => x.id === row.dataset.rid))); const info = row.querySelector('[data-info]'); if (info) info.addEventListener('click', (e) => { e.stopPropagation(); openRecipeDetail(row.dataset.rid, 'picker'); }); });
+  const refreshList = () => { ov.querySelector('#rp-list').innerHTML = recipeRowsHtml(filter, rpCat); wireRows(); };
   wireRows();
   ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
-  const search = ov.querySelector('#rp-search');
-  search.addEventListener('input', () => { filter = search.value; ov.querySelector('#rp-list').innerHTML = recipeRowsHtml(filter); wireRows(); });
+  ov.querySelectorAll('[data-rpcat]').forEach((b) => b.addEventListener('click', () => { rpCat = b.dataset.rpcat; ov.querySelectorAll('[data-rpcat]').forEach((x) => x.classList.toggle('on', x === b)); refreshList(); }));
+  ov.querySelector('#rp-search').addEventListener('input', (e) => { filter = e.target.value; refreshList(); });
   ov.querySelector('#rp-clear').addEventListener('click', () => { const mm = data.menu[key] || {}; if (slot === 'soir') { delete mm.meal; delete mm.rid; } else { delete mm.midi; delete mm.midiRid; } data.menu[key] = mm; save(); closeOverlay(); render(); toast('Repas vidé'); });
 }
-function recipeRowsHtml(filter) {
+function recipeRowsHtml(filter, catFilter) {
   const f = (filter || '').toLowerCase().trim();
-  const list = data.recettes.filter((r) => !f || r.nom.toLowerCase().includes(f));
+  let list = data.recettes.filter((r) => !f || r.nom.toLowerCase().includes(f));
+  if (catFilter === 'plat') list = list.filter((r) => !DESSERT_IDS.has(r.id));
+  else if (catFilter === 'dessert') list = list.filter((r) => DESSERT_IDS.has(r.id));
   if (!list.length) return `<div class="empty">Aucune recette trouvée.</div>`;
   return list.map((r) => `<div class="item recipe" data-rid="${r.id}"><span class="label">${r.emoji} ${esc(r.nom)}</span><button class="rinfo" data-info="${r.id}" title="Voir la recette">ⓘ</button><span class="go">＋</span></div>`).join('');
 }
 function recipeBookRowsHtml(filter, cat) {
   const f = (filter || '').toLowerCase().trim();
   let list = data.recettes.filter((r) => !f || r.nom.toLowerCase().includes(f));
-  if (cat === 'fav') list = list.filter((r) => data.favoris.includes(r.id));
-  else if (cat === 'rapide') list = list.filter((r) => tempsMin(r.temps) <= 25);
+  if (cat === 'plat') list = list.filter((r) => !DESSERT_IDS.has(r.id));
   else if (cat === 'dessert') list = list.filter((r) => DESSERT_IDS.has(r.id));
+  else if (cat === 'fav') list = list.filter((r) => data.favoris.includes(r.id));
+  else if (cat === 'rapide') list = list.filter((r) => tempsMin(r.temps) <= 25);
   if (!list.length) return `<div class="empty">Aucune recette.</div>`;
   return list.map((r) => { const fav = data.favoris.includes(r.id); return `<div class="item recipe" data-rid="${r.id}"><span class="label">${r.emoji} ${esc(r.nom)}</span>${r.temps ? `<span class="muted" style="margin-right:2px">${esc(r.temps)}</span>` : ''}<button class="rfav" data-fav="${r.id}">${fav ? '❤️' : '🤍'}</button><span class="go">›</span></div>`; }).join('');
 }
 function openRecipeBook() {
   closeOverlay();
-  let filter = ''; let cat = 'tout';
-  const cats = [['tout', 'Tout'], ['fav', '❤️ Favoris'], ['rapide', '⚡ Rapide'], ['dessert', '🍰 Desserts']];
+  let filter = ''; let cat = 'plat';
+  const cats = [['plat', '🥘 Plats'], ['dessert', '🍰 Desserts'], ['rapide', '⚡ Rapide'], ['fav', '❤️ Favoris'], ['tout', 'Tout']];
   const ov = document.createElement('div'); ov.className = 'overlay';
   ov.innerHTML = `
     <div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>📖 Livre de recettes</h2></div>
     <div class="overlay-body">
       <input class="input" id="rb-search" placeholder="Rechercher une recette…" autocomplete="off" />
-      <div class="chips" id="rb-cats" style="margin-top:10px">${cats.map((c) => `<button class="chip ${c[0] === 'tout' ? 'on' : ''}" data-cat="${c[0]}">${c[1]}</button>`).join('')}</div>
-      <div class="list" id="rb-list" style="margin-top:8px">${recipeBookRowsHtml('', 'tout')}</div>
+      <div class="chips" id="rb-cats" style="margin-top:10px">${cats.map((c) => `<button class="chip ${c[0] === 'plat' ? 'on' : ''}" data-cat="${c[0]}">${c[1]}</button>`).join('')}</div>
+      <div class="list" id="rb-list" style="margin-top:8px">${recipeBookRowsHtml('', 'plat')}</div>
     </div>`;
   document.body.appendChild(ov);
   const wire = () => ov.querySelectorAll('.recipe').forEach((row) => { row.addEventListener('click', () => openRecipeDetail(row.dataset.rid, 'book')); const fb = row.querySelector('[data-fav]'); if (fb) fb.addEventListener('click', (e) => { e.stopPropagation(); toggleFav(row.dataset.rid); refresh(); }); });
