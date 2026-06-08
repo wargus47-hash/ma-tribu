@@ -4,7 +4,7 @@
    ============================================================ */
 
 const STORE_KEY = 'matribu_v1';
-const APP_BUILD = 'v25';
+const APP_BUILD = 'v26';
 
 const RAYONS = [
   'Fruits & Légumes', 'Frais', 'Viande & Poisson', 'Surgelés',
@@ -167,6 +167,27 @@ function seedRecettes() {
     { id: "r48", nom: "Cookies maison", emoji: "🍪", temps: "25 min", portions: "12 cookies", ing: [["Farine","Épicerie salée"],["Beurre","Frais"],["Sucre","Épicerie sucrée"],["Œufs","Frais"],["Pépites de chocolat","Épicerie sucrée"]], etapes: ["Préchauffe à 180°C. Mélange le beurre mou et le sucre, ajoute l'œuf.","Incorpore la farine puis les pépites.","Dépose des petits tas sur une plaque.","Cuis 10 à 12 min : ils doivent rester moelleux au centre."] }
   ];
 }
+/* ===== Barkley — constantes et seed ===== */
+const BARKLEY_OBJ_DEF = {
+  petit: ["S'habiller tout seul le matin", "Manger assis jusqu'à la fin", "Ranger ses jouets le soir"],
+  moyen: ["Faire ses devoirs sans rappel", "Ranger sa chambre", "Parler calmement quand frustré(e)"],
+  grand: ["Routine matin complète seul", "Devoirs + révisions autonomes", "Tâches ménagères assignées"]
+};
+const BARKLEY_FICHE_DEF = {
+  petit: ["S'habiller seul", "Manger assis", "Ranger les jouets", "Rituel dodo accepté"],
+  moyen: ["Devoirs faits", "Chambre rangée", "Pas de crise", "Respecté les règles"],
+  grand: ["Travail scolaire", "Routine matin", "Gestion émotions", "Tâches ménagères"]
+};
+const BARKLEY_REC_DEF = {
+  petit: { p1: ["Autocollant au choix", "Choisir l'histoire du soir", "10 min de jeu avec papa"], p5: ["Choisir le repas du soir", "Film au choix", "Activité surprise"], p10: ["Sortie au choix", "Jouet dans un budget", "Journée spéciale"] },
+  moyen: { p1: ["30 min d'écran bonus", "Choisir le dessert", "Coucher 15 min plus tard"], p5: ["Film au choix", "Ami à la maison", "Activité au choix"], p10: ["Sortie au choix", "Shopping dans un budget", "Week-end spécial"] },
+  grand: { p1: ["1h d'écran bonus", "Choisir le repas", "Coucher 30 min plus tard"], p5: ["Sortie avec amis", "Budget shopping", "Activité premium"], p10: ["Week-end spécial", "Achat important", "Privilège au choix"] }
+};
+function seedBarkleyFor() {
+  return { ageGroup: '', jetons: 0, objectifJetons: 10, recompenseJetons: '', contratDate: '', bonusGiven: false, contrat: [0, 1, 2].map(() => ({ id: uid(), texte: '', coche: false })), ficheDate: '', fiche: [null, null, null, null], ficheComportements: [] };
+}
+/* ======================================== */
+
 function seed() {
   return {
     version: 14,
@@ -221,6 +242,7 @@ function seed() {
     vacances: [],
     devoirs: [],
     recompenses: { e1: seedRecompensesFor() },
+    barkley: {},
     pharmacie: seedPharmacie(),
     menage: seedMenage(),
     finances: { revenu: 0, charges: [], depenses: [] },
@@ -266,6 +288,7 @@ function migrate() {
   data.vacances = data.vacances || [];
   data.devoirs = data.devoirs || [];
   data.recompenses = data.recompenses || {};
+  data.barkley = data.barkley || {};
   if (data.reglages.consignesSitter === undefined) data.reglages.consignesSitter = '';
   if (data.reglages.ville === undefined) data.reglages.ville = '';
   if (data.reglages.lastExport === undefined) data.reglages.lastExport = '';
@@ -2111,81 +2134,300 @@ function openMinuteur() {
 
 function openBarkley() {
   closeOverlay();
+
+  // ── Init & reset quotidien ──────────────────────────────────────
+  if (!data.barkley) data.barkley = {};
+  const ti = todayISO();
+  data.enfants.forEach((e) => {
+    if (!data.barkley[e.id]) data.barkley[e.id] = seedBarkleyFor();
+    const bk = data.barkley[e.id];
+    if (bk.contratDate !== ti) { bk.contratDate = ti; bk.bonusGiven = false; bk.contrat.forEach((c) => { c.coche = false; }); }
+    if (bk.ficheDate !== ti) { bk.ficheDate = ti; bk.fiche = [null, null, null, null]; }
+    if (!bk.ficheComportements || !bk.ficheComportements.length) { bk.ficheComportements = bk.ageGroup ? [...(BARKLEY_FICHE_DEF[bk.ageGroup] || [])] : []; }
+  });
+  save();
+
+  let activeChild = data.enfants[0] ? data.enfants[0].id : '';
+  let bkTab = 'outils';
   let bkComp = 0, bkCorr = 0;
   const ov = document.createElement('div'); ov.className = 'overlay'; document.body.appendChild(ov);
 
-  const PRINCIPES = [
-    { e: '🕐', t: 'Rends le temps visible', d: "Les enfants avec TDAH vivent dans un «présent perpétuel». Utilise le minuteur visuel, une horloge analogique, le planning affiché. Le temps abstrait n'existe pas pour eux." },
-    { e: '✍️', t: 'Externalise l\'information', d: "Leur mémoire de travail est limitée. Écris les règles, tâches et routines sur papier ou tableau. Ne compte jamais sur leur souvenir." },
-    { e: '⚡', t: 'Rapproche les conséquences', d: "'Ce soir' ou 'cette semaine' = trop loin. Les récompenses et conséquences doivent être quasi-immédiates (moins de 30 min). Sinon elles n'ont aucun effet." },
-    { e: '🌟', t: 'Augmente la motivation', d: "Leur motivation interne est structurellement plus faible. Il faut plus de récompenses externes, plus variées, plus fréquentes. C'est neurologique, pas de la mauvaise volonté." },
-    { e: '🔄', t: 'Construis des routines fixes', d: "La régularité compense le déficit d'auto-régulation. Mêmes horaires, mêmes rituels, même ordre tous les jours. La prévisibilité est un vrai médicament." },
-    { e: '💬', t: 'Parle moins, agis plus', d: "Une instruction courte, claire, une seule fois. Puis agis (conséquence ou aide immédiate). Les longues explications aggravent la situation — leur cerveau décroche." }
-  ];
+  // ── Helpers ─────────────────────────────────────────────────────
+  function grpLabel(g) { return { petit: '🧸 Petits (3-5 ans)', moyen: '📚 Moyens (6-9 ans)', grand: '🎯 Grands (10+)' }[g] || ''; }
 
-  const QUAND_ALORS = [
-    { q: 'tu as rangé ta chambre', a: 'tu peux regarder la télé' },
-    { q: 'tes devoirs sont finis', a: 'on joue ensemble 15 min' },
-    { q: "tu t'es habillé(e) seul(e)", a: 'tu choisis le repas du soir' },
-    { q: 'tu as mangé assis jusqu\'à la fin', a: 'tu as le dessert' },
-    { q: "tu t'es brossé les dents sans rappel", a: 'tu gagnes une étoile' },
-    { q: 'tu as parlé calmement', a: "on t'écoute tout de suite" },
-    { q: 'tu as fait ta routine du matin', a: 'on part sereinement' },
-    { q: "tu as accepté le 'non' sans crise", a: 'la prochaine demande est prioritaire' }
-  ];
-
-  const CRISE = [
-    { n: '1', t: 'Garde ton calme', d: "Respire. Ta propre régulation est le 1er outil. Si tu t'énerves, la crise s'amplifie. Baisse la voix." },
-    { n: '2', t: 'Réduis les mots', d: '"Je vois que tu es en colère. Je suis là." C\'est tout. Pas d\'argumentation, pas d\'explication, pas de négociation.' },
-    { n: '3', t: 'Sécurise', d: "Éloigne les objets dangereux. Ne bloque pas physiquement sauf danger réel. Reste à proximité." },
-    { n: '4', t: 'Attends le pic', d: "La crise a un pic puis descend naturellement. Tu ne peux pas l'abréger. Reste calme et présent." },
-    { n: '5', t: 'Reconnecte', d: '"Tu vas mieux ? Viens, on fait X ensemble." Pas de punition immédiate après une crise — la punition différée ne fonctionne pas.' },
-    { n: '6', t: 'Débriefing (30 min après)', d: '"Qu\'est-ce qui s\'est passé ? Qu\'est-ce qu\'on peut faire différemment ?" Sans émotion, sans accusation.' }
-  ];
-
-  const JOURNEE = [
-    { e: '⏰', t: 'Lever + routine matin', d: 'Même ordre. Checklist visuelle affichée (pas dans la tête).' },
-    { e: '🎒', t: 'Départ école', d: 'Sac préparé la veille. Vérification en 30 sec.' },
-    { e: '🏠', t: 'Retour maison', d: 'Collation AVANT les devoirs. 20 min de décompression libre.' },
-    { e: '📚', t: 'Devoirs', d: 'Tranches de 15-20 min max. Pause entre chaque. Pas à table.' },
-    { e: '🍽️', t: 'Dîner + bain', d: 'Moment calme. Écrans éteints 30 min avant le bain.' },
-    { e: '🛏️', t: 'Rituel dodo', d: 'Même heure. Histoire. Lumière tamisée. Zéro stimulation.' }
-  ];
-
-  function ratioCalc() {
-    const r = bkCorr > 0 ? (bkComp / bkCorr).toFixed(1) : (bkComp > 0 ? '∞' : '—');
-    const ok = bkCorr === 0 ? bkComp > 0 : bkComp / bkCorr >= 3;
-    return { r, ok };
+  function starsHtml(bk) {
+    const j = bk.jetons || 0, goal = bk.objectifJetons || 10;
+    const show = Math.min(j, 20), empty = Math.max(0, Math.min(goal, 20) - show);
+    const over = j > 20 ? ' <b style="color:var(--primary)">+' + (j - 20) + '</b>' : '';
+    const sz = bk.ageGroup === 'petit' ? 28 : 22;
+    return '<span style="font-size:' + sz + 'px;line-height:1.5;word-break:break-all">⭐'.repeat(show) + '<span style="opacity:.2">⭐'.repeat(empty) + '</span></span>' + over;
   }
 
-  function refreshRatio() {
-    const { r, ok } = ratioCalc();
-    const box = ov.querySelector('#bk-box');
-    if (!box) return;
-    box.style.background = ok ? '#dcfce7' : '#fef3c7';
-    const num = box.querySelector('.bk-num'); if (num) { num.textContent = 'Ratio ' + r + ':1'; num.style.color = ok ? '#16a34a' : '#d97706'; }
-    const msg = box.querySelector('.bk-msg'); if (msg) { msg.textContent = ok ? '✅ Excellent ! Tu es dans la zone positive.' : '⚠️ Objectif : 3 compliments pour 1 correction'; msg.style.color = ok ? '#16a34a' : '#d97706'; }
+  function updateTokensDOM() {
+    const bk = data.barkley[activeChild]; if (!bk) return;
+    const j = bk.jetons || 0, goal = bk.objectifJetons || 10, pct = Math.min(100, j / goal * 100);
+    const e1 = ov.querySelector('#bkt-cnt'); if (e1) e1.textContent = j;
+    const e2 = ov.querySelector('#bkt-stars'); if (e2) e2.innerHTML = starsHtml(bk);
+    const e3 = ov.querySelector('#bkt-bar'); if (e3) e3.style.width = pct + '%';
+    const e4 = ov.querySelector('#bkt-prog'); if (e4) e4.textContent = j + ' / ' + goal + ' jetons';
+    if (j >= goal) toast('🎉 Objectif atteint !');
   }
 
+  function tabBar() {
+    return `<div class="chips" style="margin-bottom:16px">
+      <button class="chip ${bkTab === 'outils' ? 'on' : ''}" data-bktab="outils">🔧 Outils pratiques</button>
+      <button class="chip ${bkTab === 'theorie' ? 'on' : ''}" data-bktab="theorie">📖 Comprendre</button>
+    </div>`;
+  }
+
+  function childTabs() {
+    if (data.enfants.length < 2) return '';
+    return `<div class="chips" style="margin:0 0 12px">${data.enfants.map((e) => `<button class="chip ${e.id === activeChild ? 'on' : ''}" data-bkchild="${esc(e.id)}">${esc(e.prenom)}</button>`).join('')}</div>`;
+  }
+
+  function wireCommon() {
+    ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
+    ov.querySelectorAll('[data-bktab]').forEach((b) => b.addEventListener('click', () => { bkTab = b.dataset.bktab; draw(); }));
+    ov.querySelectorAll('[data-bkchild]').forEach((b) => b.addEventListener('click', () => { activeChild = b.dataset.bkchild; draw(); }));
+  }
+
+  // ── Vue principale : outils par enfant ──────────────────────────
   function draw() {
-    const { r, ok } = ratioCalc();
-    ov.innerHTML = `
-      <div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>🧠 Méthode Barkley</h2></div>
-      <div class="overlay-body">
+    if (bkTab === 'theorie') { drawTheorie(); return; }
 
-        <div class="card" style="border-left:4px solid #2563eb">
-          <b style="font-size:16px">C'est quoi ?</b>
-          <p style="margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.55">La méthode du Dr <b>Russell Barkley</b> (neuropsychologue américain) est la référence mondiale pour les enfants <b>TDAH</b>, hyperactifs, impulsifs ou inattentifs. Principe fondateur : <b>ces enfants ne manquent pas de volonté — ils manquent de régulation neurologique.</b> Les 6 outils ci-dessous compensent ce déficit de l'extérieur, sans médicament ni punition excessive.</p>
+    const child = data.enfants.find((e) => e.id === activeChild);
+    if (!child) {
+      ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>🧠 Barkley</h2></div><div class="overlay-body">${tabBar()}<p class="muted">Aucun enfant enregistré — va dans ⚙️ Réglages → Mes enfants.</p></div>`;
+      wireCommon(); return;
+    }
+    if (!data.barkley[activeChild]) data.barkley[activeChild] = seedBarkleyFor();
+    const bk = data.barkley[activeChild];
+
+    // ── Sélecteur de profil d'âge (1ère fois) ──
+    if (!bk.ageGroup) {
+      ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>🧠 Méthode Barkley</h2></div>
+        <div class="overlay-body">
+          ${tabBar()}${childTabs()}
+          <div class="card" style="text-align:center;padding:22px 16px">
+            <div style="font-size:42px;margin-bottom:8px">👋</div>
+            <b style="font-size:17px">Première config pour ${esc(child.prenom)} !</b>
+            <p class="muted" style="font-size:13px;margin:8px 0 20px;line-height:1.55">Choisis le profil d'âge pour avoir des <b>objectifs, récompenses et outils vraiment adaptés</b> :</p>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <button class="btn btn-primary" data-grp="petit" style="padding:14px 12px;font-size:15px;text-align:left"><div>🧸 Petits — 3 à 5 ans</div><div style="font-size:12px;font-weight:400;opacity:.85;margin-top:3px">Jetons visuels ⭐, objectifs simples illustrés, récompenses ultra-rapides</div></button>
+              <button class="btn btn-primary" data-grp="moyen" style="padding:14px 12px;font-size:15px;text-align:left"><div>📚 Moyens — 6 à 9 ans</div><div style="font-size:12px;font-weight:400;opacity:.85;margin-top:3px">Tableau de points, contrat journalier, bilan du soir en 4 comportements</div></button>
+              <button class="btn btn-primary" data-grp="grand" style="padding:14px 12px;font-size:15px;text-align:left"><div>🎯 Grands — 10 ans et plus</div><div style="font-size:12px;font-weight:400;opacity:.85;margin-top:3px">Système de privilèges, auto-évaluation, objectifs négociés</div></button>
+            </div>
+          </div>
+        </div>`;
+      wireCommon();
+      ov.querySelectorAll('[data-grp]').forEach((b) => b.addEventListener('click', () => {
+        bk.ageGroup = b.dataset.grp;
+        bk.ficheComportements = [...(BARKLEY_FICHE_DEF[bk.ageGroup] || [])];
+        bk.contrat.forEach((c, i) => { if (!c.texte) c.texte = (BARKLEY_OBJ_DEF[bk.ageGroup] || [])[i] || ''; });
+        save(); draw();
+      }));
+      return;
+    }
+
+    // ── Données ──
+    const grp = bk.ageGroup;
+    const j = bk.jetons || 0, goal = bk.objectifJetons || 10;
+    const pct = Math.min(100, j / goal * 100);
+    const doneCount = bk.contrat.filter((c) => c.coche).length;
+    const allDone = doneCount === 3;
+    const comps = (bk.ficheComportements && bk.ficheComportements.length) ? bk.ficheComportements : (BARKLEY_FICHE_DEF[grp] || []);
+    const ficheBon = bk.fiche.filter((v) => v === 2).length;
+    const ficheRated = bk.fiche.filter((v) => v !== null).length;
+    const rec = BARKLEY_REC_DEF[grp] || BARKLEY_REC_DEF.moyen;
+    const objDefs = BARKLEY_OBJ_DEF[grp] || [];
+
+    ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>🧠 Méthode Barkley</h2></div>
+      <div class="overlay-body">
+        ${tabBar()}${childTabs()}
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <b style="font-size:18px">${esc(child.prenom)}</b>
+          <button class="btn btn-mini btn-ghost" data-chgrp style="font-size:12px">${grpLabel(grp)} ✏️</button>
         </div>
 
+        <!-- ══ JETONS ══ -->
+        <div class="section-title">🏅 Tableau de jetons</div>
+        <div class="card">
+          <div id="bkt-stars" style="min-height:34px;margin-bottom:12px">${starsHtml(bk)}</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+            <button id="bkt-minus" class="btn" style="font-size:26px;padding:8px 18px;line-height:1;flex-shrink:0">−</button>
+            <div style="flex:1;text-align:center">
+              <div id="bkt-cnt" style="font-size:56px;font-weight:800;color:var(--primary);line-height:1">${j}</div>
+              <div id="bkt-prog" class="muted" style="font-size:13px">${j} / ${goal} jetons</div>
+            </div>
+            <button id="bkt-plus" class="btn btn-primary" style="font-size:26px;padding:8px 18px;line-height:1;flex-shrink:0">+</button>
+          </div>
+          <div style="background:var(--line);border-radius:4px;height:10px;overflow:hidden;margin-bottom:10px">
+            <div id="bkt-bar" style="background:var(--ok);height:100%;width:${pct}%;border-radius:4px;transition:width .35s ease"></div>
+          </div>
+          ${j >= goal ? `<div style="background:#dcfce7;border-radius:12px;padding:12px;text-align:center;margin-bottom:10px"><b style="color:#16a34a;font-size:15px">🎉 Objectif atteint ! C'est l'heure de la récompense !</b></div>` : ''}
+          ${bk.recompenseJetons ? `<div style="text-align:center;font-weight:600;color:var(--primary-d);font-size:13px;margin-bottom:8px">🎯 Pour : ${esc(bk.recompenseJetons)} (${goal} jetons)</div>` : ''}
+          <button id="bkt-edit" class="btn btn-mini btn-ghost btn-block">✏️ Modifier l'objectif (${goal} jetons)</button>
+        </div>
+
+        <!-- ══ OBJECTIFS DU JOUR ══ -->
+        <div class="section-title">📋 Objectifs du jour
+          <span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:6px">${allDone ? '✅ tous atteints !' : doneCount + '/3'}</span>
+        </div>
+        <div class="card">
+          ${allDone && !bk.bonusGiven ? `<div style="background:#dcfce7;border-radius:10px;padding:10px;text-align:center;margin-bottom:12px"><b style="color:#16a34a">🎉 ${esc(child.prenom)} a tout réussi aujourd'hui ! +2 jetons bonus !</b></div>` : ''}
+          ${allDone && bk.bonusGiven ? `<div style="background:#dcfce7;border-radius:10px;padding:10px;text-align:center;margin-bottom:12px"><b style="color:#16a34a">✅ Super journée — bonus déjà accordé aujourd'hui !</b></div>` : ''}
+          ${bk.contrat.map((c, i) => `
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 0;${i < 2 ? 'border-bottom:1px solid var(--line)' : ''}">
+              <button data-coche="${i}" style="width:40px;height:40px;padding:0;font-size:${c.coche ? '20px' : '15px'};flex-shrink:0;border-radius:10px;border:2px solid ${c.coche ? '#16a34a' : 'var(--primary)'};background:${c.coche ? '#dcfce7' : 'var(--primary-soft)'};color:${c.coche ? '#16a34a' : 'var(--primary)'}">
+                ${c.coche ? '✓' : String(i + 1)}
+              </button>
+              <input class="input" data-ctxt="${i}" value="${esc(c.texte || objDefs[i] || '')}" placeholder="${esc(objDefs[i] || 'Objectif ' + (i + 1))}" style="border:0;padding:4px 0;font-size:14px;background:transparent;flex:1;min-width:0;${c.coche ? 'text-decoration:line-through;opacity:.5' : ''}">
+            </div>`).join('')}
+          <p class="muted" style="font-size:12px;margin-top:8px;line-height:1.5">💡 Max 3 comportements ciblés par jour (règle Barkley). Tape pour modifier le texte.</p>
+        </div>
+
+        <!-- ══ BILAN DU SOIR ══ -->
+        <div class="section-title">📊 Bilan du soir
+          <span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:6px">${ficheRated === 4 ? ficheBon + '/4 ✓' : ficheRated + '/4 notés'}</span>
+        </div>
+        <div class="card">
+          ${ficheRated === 4 ? `<div style="text-align:center;padding:10px;border-radius:10px;background:${ficheBon >= 3 ? '#dcfce7' : ficheBon >= 2 ? '#fef3c7' : '#fee2e2'};margin-bottom:12px"><b style="color:${ficheBon >= 3 ? '#16a34a' : ficheBon >= 2 ? '#d97706' : 'var(--danger)'}">${ficheBon >= 3 ? '🌟 Excellente journée !' : ficheBon >= 2 ? '👍 Bonne journée !' : '💪 On fera mieux demain'} — ${ficheBon}/4</b></div>` : ''}
+          ${comps.map((c, i) => `
+            <div style="display:flex;align-items:center;gap:8px;padding:9px 0;${i < 3 ? 'border-bottom:1px solid var(--line)' : ''}">
+              <span style="flex:1;font-size:14px;line-height:1.4">${esc(c)}</span>
+              <button data-fiche="${i}" data-val="0" class="btn btn-mini" style="padding:7px 11px;font-size:15px;background:${bk.fiche[i] === 0 ? '#fee2e2' : 'var(--line)'};color:${bk.fiche[i] === 0 ? 'var(--danger)' : 'var(--muted)'}">✗</button>
+              <button data-fiche="${i}" data-val="1" class="btn btn-mini" style="padding:7px 11px;font-size:15px;background:${bk.fiche[i] === 1 ? '#fef3c7' : 'var(--line)'};color:${bk.fiche[i] === 1 ? '#d97706' : 'var(--muted)'}">△</button>
+              <button data-fiche="${i}" data-val="2" class="btn btn-mini" style="padding:7px 11px;font-size:15px;background:${bk.fiche[i] === 2 ? '#dcfce7' : 'var(--line)'};color:${bk.fiche[i] === 2 ? '#16a34a' : 'var(--muted)'}">✓</button>
+            </div>`).join('')}
+          <button id="bk-editfiche" class="btn btn-mini btn-ghost btn-block" style="margin-top:8px">✏️ Modifier les comportements suivis</button>
+        </div>
+
+        <!-- ══ RECOMPENSES ══ -->
+        <div class="section-title">🎁 Menu des récompenses — ${grpLabel(grp)}</div>
+        <div class="card">
+          ${[['🪙 1 jeton', rec.p1, '#fef3c7', '#92400e'], ['⭐ 5 jetons', rec.p5, '#dbeafe', '#1e40af'], ['🏆 10 jetons', rec.p10, '#dcfce7', '#15803d']].map(([titre, items, bg, col]) =>
+            `<div style="margin-bottom:14px"><div style="font-weight:700;font-size:13px;color:${col};background:${bg};border-radius:8px;padding:5px 10px;display:inline-block;margin-bottom:7px">${titre}</div><div class="chips">${items.map((r) => `<span class="chip" style="font-size:13px">${esc(r)}</span>`).join('')}</div></div>`
+          ).join('')}
+          <p class="muted" style="font-size:12px;line-height:1.5">Les récompenses <b>immédiates (1 jeton)</b> sont les plus puissantes selon Barkley — elles ne doivent pas être négligées !</p>
+        </div>
+      </div>`;
+
+    wireCommon();
+
+    // Boutons jetons
+    ov.querySelector('#bkt-plus').addEventListener('click', () => { bk.jetons = (bk.jetons || 0) + 1; save(); updateTokensDOM(); });
+    ov.querySelector('#bkt-minus').addEventListener('click', () => { if ((bk.jetons || 0) > 0) { bk.jetons--; save(); updateTokensDOM(); } });
+
+    // Modifier l'objectif
+    ov.querySelector('#bkt-edit').addEventListener('click', () => {
+      const btn = ov.querySelector('#bkt-edit');
+      btn.insertAdjacentHTML('afterend', `<div id="bkt-editform" style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+        <label style="font-size:13px;font-weight:600">Nombre de jetons à atteindre :</label>
+        <input class="input" id="bkt-obj-n" type="number" inputmode="numeric" min="1" max="99" value="${bk.objectifJetons || 10}" style="font-size:16px">
+        <label style="font-size:13px;font-weight:600">Récompense choisie :</label>
+        <input class="input" id="bkt-obj-r" value="${esc(bk.recompenseJetons || '')}" placeholder="ex : sortie piscine, jouet, film…" style="font-size:15px">
+        <button class="btn btn-primary btn-block" id="bkt-obj-save">✓ Enregistrer</button>
+      </div>`);
+      btn.remove();
+      ov.querySelector('#bkt-obj-save').addEventListener('click', () => {
+        const n = parseInt(ov.querySelector('#bkt-obj-n').value, 10);
+        if (n > 0) bk.objectifJetons = n;
+        bk.recompenseJetons = (ov.querySelector('#bkt-obj-r').value || '').trim();
+        save(); draw();
+      });
+    });
+
+    // Changer le profil d'âge
+    ov.querySelector('[data-chgrp]').addEventListener('click', () => { bk.ageGroup = ''; bk.ficheComportements = []; save(); draw(); });
+
+    // Cocher un objectif
+    ov.querySelectorAll('[data-coche]').forEach((b) => b.addEventListener('click', () => {
+      const i = parseInt(b.dataset.coche, 10);
+      bk.contrat[i].coche = !bk.contrat[i].coche;
+      if (!bk.bonusGiven && bk.contrat.every((c) => c.coche)) {
+        bk.bonusGiven = true; bk.jetons = (bk.jetons || 0) + 2; toast('🎉 ' + child.prenom + ' : +2 jetons bonus !');
+      }
+      save(); draw();
+    }));
+
+    // Modifier texte objectif
+    ov.querySelectorAll('[data-ctxt]').forEach((inp) => inp.addEventListener('change', () => {
+      bk.contrat[parseInt(inp.dataset.ctxt, 10)].texte = inp.value.trim(); save();
+    }));
+
+    // Bilan du soir — notation ✗/△/✓
+    ov.querySelectorAll('[data-fiche]').forEach((b) => b.addEventListener('click', () => {
+      const i = parseInt(b.dataset.fiche, 10), v = parseInt(b.dataset.val, 10);
+      bk.fiche[i] = bk.fiche[i] === v ? null : v;
+      save(); draw();
+    }));
+
+    // Modifier les comportements suivis
+    ov.querySelector('#bk-editfiche').addEventListener('click', () => {
+      const btn = ov.querySelector('#bk-editfiche');
+      btn.insertAdjacentHTML('afterend', `<div id="bk-ficheform" style="margin-top:10px">${comps.map((c, i) => `<div style="margin-bottom:7px"><input class="input" data-bkfc="${i}" value="${esc(c)}" placeholder="Comportement ${i + 1}" style="font-size:14px"></div>`).join('')}<button class="btn btn-primary btn-block" id="bk-savefiche">✓ Enregistrer les comportements</button></div>`);
+      btn.remove();
+      ov.querySelector('#bk-savefiche').addEventListener('click', () => {
+        bk.ficheComportements = Array.from(ov.querySelectorAll('[data-bkfc]')).map((inp, i) => inp.value.trim() || comps[i] || '');
+        save(); draw();
+      });
+    });
+  }
+
+  // ── Vue théorie : les principes Barkley ─────────────────────────
+  function drawTheorie() {
+    const PRINCIPES = [
+      { e: '🕐', t: 'Rends le temps visible', d: "Les enfants avec TDAH vivent dans un «présent perpétuel». Utilise le minuteur visuel, une horloge analogique, le planning affiché. Le temps abstrait n'existe pas pour eux." },
+      { e: '✍️', t: "Externalise l'information", d: "Leur mémoire de travail est limitée. Écris les règles, tâches et routines sur papier ou tableau. Ne compte jamais sur leur souvenir." },
+      { e: '⚡', t: 'Rapproche les conséquences', d: "'Ce soir' ou 'cette semaine' = trop loin. Les récompenses et conséquences doivent être quasi-immédiates (moins de 30 min). Sinon elles n'ont aucun effet." },
+      { e: '🌟', t: 'Augmente la motivation', d: "Leur motivation interne est structurellement plus faible. Il faut plus de récompenses externes, plus variées, plus fréquentes. C'est neurologique, pas de la mauvaise volonté." },
+      { e: '🔄', t: 'Construis des routines fixes', d: "La régularité compense le déficit d'auto-régulation. Mêmes horaires, mêmes rituels, même ordre tous les jours. La prévisibilité est un vrai médicament." },
+      { e: '💬', t: 'Parle moins, agis plus', d: "Une instruction courte, claire, une seule fois. Puis agis (conséquence ou aide immédiate). Les longues explications aggravent la situation — leur cerveau décroche." }
+    ];
+    const QUAND_ALORS = [
+      { q: 'tu as rangé ta chambre', a: 'tu peux regarder la télé' },
+      { q: 'tes devoirs sont finis', a: 'on joue ensemble 15 min' },
+      { q: "tu t'es habillé(e) seul(e)", a: 'tu choisis le repas du soir' },
+      { q: "tu as mangé assis jusqu'à la fin", a: 'tu as le dessert' },
+      { q: "tu t'es brossé les dents sans rappel", a: 'tu gagnes une étoile' },
+      { q: 'tu as parlé calmement', a: "on t'écoute tout de suite" },
+      { q: 'tu as fait ta routine du matin', a: 'on part sereinement' },
+      { q: "tu as accepté le 'non' sans crise", a: 'la prochaine demande est prioritaire' }
+    ];
+    const CRISE = [
+      { n: '1', t: 'Garde ton calme', d: "Respire. Ta propre régulation est le 1er outil. Si tu t'énerves, la crise s'amplifie. Baisse la voix." },
+      { n: '2', t: 'Réduis les mots', d: '"Je vois que tu es en colère. Je suis là." C\'est tout. Pas d\'argumentation, pas de négociation.' },
+      { n: '3', t: 'Sécurise', d: "Éloigne les objets dangereux. Ne bloque pas physiquement sauf danger réel. Reste à proximité." },
+      { n: '4', t: 'Attends le pic', d: "La crise a un pic puis descend naturellement. Tu ne peux pas l'abréger. Reste calme et présent." },
+      { n: '5', t: 'Reconnecte', d: '"Tu vas mieux ? Viens, on fait X ensemble." Pas de punition immédiate après une crise — ça ne fonctionne pas.' },
+      { n: '6', t: 'Débriefing (30 min après)', d: '"Qu\'est-ce qui s\'est passé ?" Sans émotion, sans accusation. Court et concret.' }
+    ];
+    const JOURNEE = [
+      { e: '⏰', t: 'Lever + routine matin', d: 'Même ordre. Checklist visuelle affichée (pas dans la tête).' },
+      { e: '🎒', t: 'Départ école', d: 'Sac préparé la veille. Vérification en 30 sec.' },
+      { e: '🏠', t: 'Retour maison', d: 'Collation AVANT les devoirs. 20 min de décompression libre.' },
+      { e: '📚', t: 'Devoirs', d: 'Tranches de 15-20 min max. Pause entre chaque. Pas à table.' },
+      { e: '🍽️', t: 'Dîner + bain', d: 'Moment calme. Écrans éteints 30 min avant le bain.' },
+      { e: '🛏️', t: 'Rituel dodo', d: 'Même heure. Histoire. Lumière tamisée. Zéro stimulation.' }
+    ];
+    const r = bkCorr > 0 ? (bkComp / bkCorr).toFixed(1) : (bkComp > 0 ? '∞' : '—');
+    const ok = bkCorr === 0 ? bkComp > 0 : bkComp / bkCorr >= 3;
+
+    ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>🧠 Méthode Barkley</h2></div>
+      <div class="overlay-body">
+        ${tabBar()}
+        <div class="card" style="border-left:4px solid #2563eb">
+          <b style="font-size:16px">C'est quoi ?</b>
+          <p style="margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.55">La méthode du Dr <b>Russell Barkley</b> est la référence mondiale pour les enfants <b>TDAH</b>, hyperactifs, impulsifs ou inattentifs. Principe fondateur : <b>ces enfants ne manquent pas de volonté — ils manquent de régulation neurologique.</b></p>
+        </div>
         <details style="margin-bottom:14px">
           <summary style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;cursor:pointer;padding:4px 0">▸ Les 6 principes fondamentaux</summary>
           ${PRINCIPES.map((p) => `<div class="card" style="margin-top:10px"><div style="display:flex;gap:10px;align-items:flex-start"><span style="font-size:26px;flex-shrink:0">${p.e}</span><div><b style="font-size:15px">${esc(p.t)}</b><br><span class="muted" style="font-size:13px;line-height:1.5">${esc(p.d)}</span></div></div></div>`).join('')}
         </details>
-
         <div class="section-title">🔢 Compteur compliments / corrections</div>
         <div class="card">
-          <p class="muted" style="font-size:13px;margin:0 0 12px">Barkley recommande <b>au minimum 3 compliments pour 1 correction</b>. En dessous, l'enfant perçoit son environnement comme hostile et se ferme. Compte en temps réel :</p>
+          <p class="muted" style="font-size:13px;margin:0 0 12px">Barkley recommande <b>au minimum 3 compliments pour 1 correction</b>. En dessous, l'enfant perçoit son environnement comme hostile et se ferme :</p>
           <div style="display:flex;gap:10px;margin-bottom:12px">
             <button id="bk-comp" class="btn btn-primary" style="flex:1;padding:14px 10px;font-size:14px;flex-direction:column;display:flex;align-items:center;gap:4px">👏 Compliment<span id="bk-cn" style="font-size:28px;font-weight:800;line-height:1">${bkComp}</span></button>
             <button id="bk-corr" class="btn" style="flex:1;padding:14px 10px;font-size:14px;flex-direction:column;display:flex;align-items:center;gap:4px;background:#fee2e2;color:#991b1b">✋ Correction<span id="bk-cn2" style="font-size:28px;font-weight:800;line-height:1">${bkCorr}</span></button>
@@ -2196,41 +2438,45 @@ function openBarkley() {
           </div>
           <button id="bk-reset" class="btn btn-mini btn-ghost btn-block" style="margin-top:8px">↺ Remettre à zéro</button>
         </div>
-
         <div class="section-title">⏱️ La règle des 20 secondes</div>
         <div class="card">
           <p class="muted" style="font-size:13px;margin:0 0 10px">Comment donner une instruction qui sera suivie :</p>
           <div class="list">${["1. Approche-toi physiquement. Jamais de cri depuis l'autre pièce.", "2. Attends le contact visuel. Dis son prénom si besoin.", "3. Une instruction courte et positive : «Range tes chaussures» (pas «Arrête de…»).", "4. Attends 20 secondes en silence. Compte mentalement. Ne répète pas.", "5. Si pas suivi : guide physiquement avec calme, ou annonce la conséquence.", "6. Règle absolue : ne jamais répéter plus d'une fois."].map((s) => `<div class="item"><span class="label" style="font-size:14px;line-height:1.5">${esc(s)}</span></div>`).join('')}</div>
         </div>
-
         <div class="section-title">💬 Phrases "Quand… Alors…"</div>
         <div class="card">
           <p class="muted" style="font-size:13px;margin:0 0 10px">Remplace les ordres par cette formule. L'enfant garde le contrôle, la récompense est immédiate et prévisible.</p>
           <div class="list">${QUAND_ALORS.map((w) => `<div class="item"><span class="label" style="font-size:13px;line-height:1.6">Quand <b>${esc(w.q)}</b>,<br>alors <b style="color:var(--primary)">${esc(w.a)}</b></span></div>`).join('')}</div>
         </div>
-
         <details style="margin-bottom:14px">
           <summary style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;cursor:pointer;padding:4px 0">▸ Script de gestion de crise (6 étapes)</summary>
           ${CRISE.map((s) => `<div class="card" style="margin-top:10px;border-left:3px solid var(--danger)"><div style="display:flex;gap:10px;align-items:flex-start"><span style="font-size:20px;font-weight:800;color:var(--danger);min-width:24px">${s.n}</span><div><b>${esc(s.t)}</b><br><span class="muted" style="font-size:13px;line-height:1.5">${esc(s.d)}</span></div></div></div>`).join('')}
         </details>
-
         <div class="section-title">📅 Structure de journée recommandée</div>
         <div class="card">
           <p class="muted" style="font-size:13px;margin:0 0 10px">6 zones stables. La prévisibilité réduit les comportements difficiles de 30 à 50 %.</p>
           <div class="list">${JOURNEE.map((z) => `<div class="item"><span style="font-size:22px;margin-right:12px;flex-shrink:0">${z.e}</span><span class="label"><b>${esc(z.t)}</b><br><span class="muted" style="font-size:12px">${esc(z.d)}</span></span></div>`).join('')}</div>
         </div>
-
         <div class="card" style="background:var(--primary-soft);border:0;margin-bottom:8px">
           <b style="color:var(--primary-d)">📚 Pour aller plus loin</b>
-          <p style="margin:6px 0 0;color:var(--primary-d);font-size:13px">Livre : <i>"Taking Charge of ADHD"</i> — Dr Russell Barkley (ed. Guilford Press). Vidéos gratuites sur YouTube : recherche <b>"Russell Barkley ADHD"</b>. Association française : <b>HyperSupers TDAH France</b>.</p>
+          <p style="margin:6px 0 0;color:var(--primary-d);font-size:13px">Livre : <i>"Taking Charge of ADHD"</i> — Dr Russell Barkley. Vidéos gratuites sur YouTube : <b>"Russell Barkley ADHD"</b>. Asso française : <b>HyperSupers TDAH France</b>.</p>
         </div>
       </div>`;
 
-    ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
+    wireCommon();
+    function refreshRatio() {
+      const rr = bkCorr > 0 ? (bkComp / bkCorr).toFixed(1) : (bkComp > 0 ? '∞' : '—');
+      const okk = bkCorr === 0 ? bkComp > 0 : bkComp / bkCorr >= 3;
+      const box = ov.querySelector('#bk-box'); if (!box) return;
+      box.style.background = okk ? '#dcfce7' : '#fef3c7';
+      const num = box.querySelector('.bk-num'); if (num) { num.textContent = 'Ratio ' + rr + ':1'; num.style.color = okk ? '#16a34a' : '#d97706'; }
+      const msg = box.querySelector('.bk-msg'); if (msg) { msg.textContent = okk ? '✅ Excellent ! Tu es dans la zone positive.' : '⚠️ Objectif : 3 compliments pour 1 correction'; msg.style.color = okk ? '#16a34a' : '#d97706'; }
+    }
     ov.querySelector('#bk-comp').addEventListener('click', () => { bkComp++; const el = ov.querySelector('#bk-cn'); if (el) el.textContent = bkComp; refreshRatio(); });
     ov.querySelector('#bk-corr').addEventListener('click', () => { bkCorr++; const el = ov.querySelector('#bk-cn2'); if (el) el.textContent = bkCorr; refreshRatio(); });
-    ov.querySelector('#bk-reset').addEventListener('click', () => { bkComp = 0; bkCorr = 0; draw(); });
+    ov.querySelector('#bk-reset').addEventListener('click', () => { bkComp = 0; bkCorr = 0; drawTheorie(); });
   }
+
   draw();
 }
 
