@@ -104,6 +104,16 @@ function childName(id) { const e = (data.enfants || []).find((x) => x.id === id)
 function seedEnfant(prenom) { const id = uid(); data.enfants.push({ id, prenom: (prenom || 'Enfant').trim() || 'Enfant' }); data.routines[id] = seedRoutinesFor(); data.sante[id] = seedSanteFor(); data.recompenses[id] = seedRecompensesFor(); return id; }
 function quiLabel(q) { return q === 'tous' ? 'Tous' : (childName(q) || '?'); }
 function quiOptions(sel) { return '<option value="tous">Tous</option>' + (data.enfants || []).map((e) => `<option value="${e.id}"${sel === e.id ? ' selected' : ''}>${esc(e.prenom)}</option>`).join(''); }
+/* Helper textes adaptés au contexte familial */
+function contextLabel() {
+  const ctx = (data && data.reglages && data.reglages.contextFamily) || 'alternee';
+  const labels = {
+    alternee: { otherParent: "L'autre parent", nextTransition: 'prochain échange', cohabitation: 'entre les deux maisons', coParent: 'co-parent', context: 'la garde alternée' },
+    seul: { otherParent: "L'autre responsable", nextTransition: 'prochaine transition', cohabitation: 'chez toi et ailleurs', coParent: 'responsable', context: 'en tant que parent solo' },
+    autre: { otherParent: "L'autre parent/responsable", nextTransition: 'prochaine transition', cohabitation: 'à partager', coParent: 'autre parent', context: 'dans ta situation familiale' }
+  };
+  return labels[ctx] || labels.alternee;
+}
 function seedRecettes() {
   return [
     { id: "r1", nom: "Pâtes bolognaise", emoji: "🍝", temps: "30 min", portions: "4 pers.", ing: [["Pâtes","Épicerie salée"],["Viande hachée","Viande & Poisson"],["Sauce tomate","Épicerie salée"],["Oignon","Fruits & Légumes"],["Gruyère râpé","Frais"]], etapes: ["Émince l'oignon et fais-le revenir dans un filet d'huile.","Ajoute la viande hachée et fais-la dorer en l'émiettant.","Verse la sauce tomate, sale, poivre, laisse mijoter 15 min.","Cuis les pâtes dans l'eau bouillante salée (voir paquet).","Égoutte, mélange à la sauce et sers avec le gruyère."] },
@@ -159,7 +169,7 @@ function seedRecettes() {
 function seed() {
   return {
     version: 14,
-    reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false, theme: 'clair', accent: 'teal', midiSemaine: false, notifs: false, lastNotif: '', consignesSitter: '', ville: '', lastExport: '' },
+    reglages: { grand: 'Le grand', petit: 'Le petit', welcomeDismissed: false, theme: 'clair', accent: 'teal', midiSemaine: false, notifs: false, lastNotif: '', consignesSitter: '', ville: '', lastExport: '', onboardingDone: false, contextFamily: 'alternee' },
     courses: [],
     recurrents: [
       { nom: 'Pommes', rayon: 'Fruits & Légumes' }, { nom: 'Bananes', rayon: 'Fruits & Légumes' }, { nom: 'Clémentines', rayon: 'Fruits & Légumes' },
@@ -258,6 +268,8 @@ function migrate() {
   if (data.reglages.consignesSitter === undefined) data.reglages.consignesSitter = '';
   if (data.reglages.ville === undefined) data.reglages.ville = '';
   if (data.reglages.lastExport === undefined) data.reglages.lastExport = '';
+  if (data.reglages.onboardingDone === undefined) data.reglages.onboardingDone = false;
+  if (data.reglages.contextFamily === undefined) data.reglages.contextFamily = 'alternee';
   data.pharmacie = data.pharmacie || seedPharmacie();
   data.menage = data.menage || seedMenage();
   if (!data.finances) data.finances = { revenu: 0, charges: [], depenses: [] }; else { data.finances.charges = data.finances.charges || []; data.finances.depenses = data.finances.depenses || []; if (data.finances.revenu === undefined) data.finances.revenu = 0; }
@@ -784,7 +796,8 @@ function renderGarde(el) {
   document.getElementById('tr-add').addEventListener('click', addTr);
   document.getElementById('tr-nom').addEventListener('keydown', (e) => { if (e.key === 'Enter') addTr(); });
   document.getElementById('tr-reset').addEventListener('click', () => { data.transition.forEach((x) => x.fait = false); save(); renderGarde(el); toast('Sac réinitialisé — prêt pour le prochain échange'); });
-  el.insertAdjacentHTML('beforeend', activitesCardHtml() + vacancesCardHtml() + `<button class="btn btn-block" id="g-agenda" style="margin-top:4px">📅 Agenda du mois</button><button class="btn btn-block" id="g-liaison" style="margin-top:8px">📓 Cahier de liaison co-parent</button>`);
+  const ctx = contextLabel();
+  el.insertAdjacentHTML('beforeend', activitesCardHtml() + vacancesCardHtml() + `<button class="btn btn-block" id="g-agenda" style="margin-top:4px">📅 Agenda du mois</button><button class="btn btn-block" id="g-liaison" style="margin-top:8px">📓 Cahier de liaison (${ctx.coParent})</button>`);
   wireActivites(el);
   wireVacances(el);
   el.querySelector('#g-agenda').addEventListener('click', openAgenda);
@@ -1610,10 +1623,21 @@ function openPhrases() {
 }
 function openDemarches() {
   closeOverlay(); const ov = document.createElement('div'); ov.className = 'overlay';
-  ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>📑 Démarches du parent séparé</h2></div><div class="overlay-body">
-    <p class="muted" style="margin:0 2px 12px">Les principales démarches à ne pas oublier après une séparation.</p>
-    ${DEMARCHES.map((d) => `<div class="card"><p style="margin:0 0 4px"><b>${d.emoji} ${esc(d.titre)}</b></p><p style="margin:0" class="muted">${esc(d.desc)}</p></div>`).join('')}
-    <p class="muted" style="text-align:center;font-size:12px">Infos générales — renseigne-toi auprès des organismes concernés (CAF, mairie, avocat, JAF).</p></div>`;
+  const ctx = data.reglages.contextFamily || 'alternee';
+  if (ctx !== 'alternee') {
+    ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>📑 Démarches</h2></div><div class="overlay-body">
+      <div class="jbut" style="background:var(--primary-soft);border-left:3px solid var(--primary);margin-bottom:14px">
+        <p style="margin:0;font-size:14px">Cette section est pensée pour les parents séparés. Si tu as besoin de soutien ou de ressources, consulte <b>🆘 Ressources & soutien</b> ci-dessous.</p>
+      </div>
+      <div class="section-title">Ressources adaptées à ta situation</div>
+      <div class="card"><div class="list">${RESSOURCES.map((r) => `<div class="item"><span class="label"><b>${esc(r.nom)}</b><br><span class="muted" style="font-size:13px">${esc(r.desc)}</span></span>${r.tel ? `<a class="tel-link" href="tel:${esc(r.tel)}">📞 ${esc(r.telLabel)}</a>` : ''}</div>`).join('')}</div></div>
+    </div>`;
+  } else {
+    ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-back>←</button><h2>📑 Démarches du parent séparé</h2></div><div class="overlay-body">
+      <p class="muted" style="margin:0 2px 12px">Les principales démarches à ne pas oublier après une séparation.</p>
+      ${DEMARCHES.map((d) => `<div class="card"><p style="margin:0 0 4px"><b>${d.emoji} ${esc(d.titre)}</b></p><p style="margin:0" class="muted">${esc(d.desc)}</p></div>`).join('')}
+      <p class="muted" style="text-align:center;font-size:12px">Infos générales — renseigne-toi auprès des organismes concernés (CAF, mairie, avocat, JAF).</p></div>`;
+  }
   document.body.appendChild(ov); ov.querySelector('[data-back]').addEventListener('click', openGuide);
 }
 function openRessources() {
@@ -1659,7 +1683,9 @@ function openSoin() {
 }
 function openGuide() {
   closeOverlay();
-  const items = [['🧠 Que faire quand…', 'openSituations'], ['💬 Phrases qui aident', 'openPhrases'], ['💛 Rituels & conseils', 'openRituels'], ['🧭 Repères par âge', 'openReperes'], ['🧰 Fiches pratiques maison', 'openFiches'], ['🧹 Planning ménage', 'openMenage'], ['🩹 En cas de pépin', 'openUrgences'], ['💊 Trousse à pharmacie', 'openTrousse'], ['📋 Checklists de saison', 'openSaison'], ['🎂 Organiser un anniversaire', 'openAnnivGuide'], ['📑 Démarches (parent séparé)', 'openDemarches'], ['🆘 Ressources & soutien', 'openRessources'], ['🧘 Prendre soin de toi', 'openSoin'], ['💬 Questions pour papoter', 'openPapoter'], ['🥕 Fruits & légumes de saison', 'openSaisonProduits'], ['📖 Histoires du soir', 'openHistoires']];
+  const ctx = data.reglages.contextFamily || 'alternee';
+  const demarche_label = ctx === 'alternee' ? '📑 Démarches (parent séparé)' : '📑 Ressources pour ta situation';
+  const items = [['🧠 Que faire quand…', 'openSituations'], ['💬 Phrases qui aident', 'openPhrases'], ['💛 Rituels & conseils', 'openRituels'], ['🧭 Repères par âge', 'openReperes'], ['🧰 Fiches pratiques maison', 'openFiches'], ['🧹 Planning ménage', 'openMenage'], ['🩹 En cas de pépin', 'openUrgences'], ['💊 Trousse à pharmacie', 'openTrousse'], ['📋 Checklists de saison', 'openSaison'], ['🎂 Organiser un anniversaire', 'openAnnivGuide'], [demarche_label, 'openDemarches'], ['🆘 Ressources & soutien', 'openRessources'], ['🧘 Prendre soin de toi', 'openSoin'], ['💬 Questions pour papoter', 'openPapoter'], ['🥕 Fruits & légumes de saison', 'openSaisonProduits'], ['📖 Histoires du soir', 'openHistoires']];
   const map = { openFiches, openMenage, openUrgences, openTrousse, openReperes, openRituels, openSaison, openSituations, openPhrases, openDemarches, openRessources, openSoin, openAnnivGuide, openPapoter, openSaisonProduits, openHistoires };
   const ov = document.createElement('div'); ov.className = 'overlay';
   ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>📖 Le guide du parent</h2></div>
@@ -2116,9 +2142,200 @@ function shareList() {
   else if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => toast('Liste copiée ✓')).catch(() => toast('Copie impossible'));
   else toast('Partage non disponible sur cet appareil');
 }
+/* ---------- Onboarding wizard (1er lancement) ---------- */
+function renderOnboarding(el) {
+  let step = 1;
+  let contextSelected = 'alternee';
+  let enfantsAccum = [{ prenom: 'Mon enfant' }];
+
+  function showStep(s) {
+    step = s;
+    document.querySelectorAll('.onboarding-step').forEach((st) => st.classList.remove('active'));
+    document.getElementById('onb-step-' + s).classList.add('active');
+  }
+
+  function finishOnboarding() {
+    const newEnfants = enfantsAccum.map((e) => ({ id: uid(), prenom: e.prenom.trim() || 'Enfant' }));
+    data.reglages.contextFamily = contextSelected;
+    data.reglages.onboardingDone = true;
+    data.enfants = newEnfants;
+    data.routines = {};
+    data.sante = {};
+    data.recompenses = {};
+    newEnfants.forEach((e) => {
+      data.routines[e.id] = seedRoutinesFor();
+      data.sante[e.id] = seedSanteFor();
+      data.recompenses[e.id] = seedRecompensesFor();
+    });
+    save();
+    el.innerHTML = '';
+    boot();
+  }
+
+  el.innerHTML = `
+    <div class="onboarding-screen">
+      <div class="onboarding-counter"><span id="onb-counter">Étape 1 / 4</span></div>
+
+      <!-- Étape 1 : Accueil + contexte -->
+      <div class="onboarding-step active" id="onb-step-1">
+        <div class="onboarding-body" style="display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center">
+          <h1 style="font-size:48px;margin-bottom:20px">👋</h1>
+          <h2>Bienvenue dans Ma Tribu</h2>
+          <p style="color:var(--muted);margin-bottom:30px;max-width:280px">Une app simple pour t'organiser au quotidien en tant que parent.</p>
+          <div style="margin-bottom:30px;width:100%;max-width:300px">
+            <div style="margin-bottom:20px">
+              <input type="radio" name="context" value="alternee" checked id="c1" /><label for="c1" style="margin-left:10px;cursor:pointer">Je suis en garde alternée</label><br/>
+              <span style="font-size:12px;color:var(--muted);margin-left:30px">Enfants chez moi une semaine / une semaine ailleurs</span>
+            </div>
+            <div style="margin-bottom:20px">
+              <input type="radio" name="context" value="seul" id="c2" /><label for="c2" style="margin-left:10px;cursor:pointer">Je suis parent solo</label><br/>
+              <span style="font-size:12px;color:var(--muted);margin-left:30px">Les enfants sont avec moi</span>
+            </div>
+            <div>
+              <input type="radio" name="context" value="autre" id="c3" /><label for="c3" style="margin-left:10px;cursor:pointer">Autre situation</label><br/>
+              <span style="font-size:12px;color:var(--muted);margin-left:30px">Tutelle, partage différent, etc.</span>
+            </div>
+          </div>
+        </div>
+        <div class="onboarding-feet">
+          <button class="btn btn-primary btn-block" id="onb-next-1">Suivant</button>
+        </div>
+      </div>
+
+      <!-- Étape 2 : Enfants -->
+      <div class="onboarding-step" id="onb-step-2">
+        <div class="onboarding-body">
+          <h2>Qui sont tes enfants ?</h2>
+          <div id="onb-enfants-list" style="margin-bottom:20px"></div>
+          <div class="card">
+            <div style="display:flex;gap:8px">
+              <input class="input" id="onb-prenom" placeholder="Prénom" style="flex:1" enterkeyhint="next" />
+            </div>
+            <button class="btn btn-accent btn-block" id="onb-add-enfant" style="margin-top:10px">+ Ajouter un enfant</button>
+          </div>
+        </div>
+        <div class="onboarding-feet">
+          <button class="btn" id="onb-back-2">← Retour</button>
+          <button class="btn btn-primary" id="onb-next-2" style="flex:1">Suivant</button>
+        </div>
+      </div>
+
+      <!-- Étape 3 : Ville + Notifications -->
+      <div class="onboarding-step" id="onb-step-3">
+        <div class="onboarding-body" style="display:flex;flex-direction:column;justify-content:center">
+          <h2>Pour finir…</h2>
+          <div class="card">
+            <label style="display:block;font-weight:bold;margin-bottom:8px">📍 Où habites-tu ?</label>
+            <input class="input" id="onb-ville" placeholder="Ville ou code postal" style="margin-bottom:10px" />
+            <span style="font-size:12px;color:var(--muted)">Pour afficher la météo sur le tableau de bord (optionnel)</span>
+          </div>
+          <div class="card">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" id="onb-notifs" />
+              <span>🔔 Activer les notifications</span>
+            </label>
+            <span style="font-size:12px;color:var(--muted);display:block;margin-top:10px">Tu seras averti des rappels et activités du jour</span>
+          </div>
+        </div>
+        <div class="onboarding-feet">
+          <button class="btn" id="onb-back-3">← Retour</button>
+          <button class="btn btn-primary" id="onb-next-3" style="flex:1">Suivant</button>
+        </div>
+      </div>
+
+      <!-- Étape 4 : Résumé -->
+      <div class="onboarding-step" id="onb-step-4">
+        <div class="onboarding-body" style="display:flex;flex-direction:column;justify-content:center">
+          <h2>C'est prêt ! 🎉</h2>
+          <div class="card">
+            <p style="font-weight:bold;margin-bottom:10px">Résumé :</p>
+            <div style="font-size:14px;color:var(--muted)">
+              <p><b>Situation familiale :</b> <span id="onb-recap-context"></span></p>
+              <p><b>Enfants :</b> <span id="onb-recap-enfants"></span></p>
+              <div id="onb-recap-ville" style="display:none"><p><b>Localité :</b> <span id="onb-recap-ville-text"></span></p></div>
+            </div>
+          </div>
+          <div class="card" style="background:var(--primary-soft);border-left:3px solid var(--primary)">
+            <p style="margin:0;font-size:13px">💡 Tu peux modifier tous ces paramètres dans ⚙️ Réglages quand tu veux.</p>
+          </div>
+        </div>
+        <div class="onboarding-feet">
+          <button class="btn" id="onb-back-4">← Retour</button>
+          <button class="btn btn-primary btn-block" id="onb-finish">C'est parti 🚀</button>
+        </div>
+      </div>
+    </div>`;
+
+  // Rendre la liste d'enfants dans l'étape 2
+  function renderEnfantsList() {
+    const list = document.getElementById('onb-enfants-list');
+    list.innerHTML = enfantsAccum.map((e, i) => `
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center">
+        <span>${esc(e.prenom)}</span>
+        <button class="btn btn-mini" data-del-enfant="${i}">Retirer</button>
+      </div>`).join('');
+    list.querySelectorAll('[data-del-enfant]').forEach((b) => b.addEventListener('click', () => {
+      enfantsAccum.splice(+b.dataset.delEnfant, 1);
+      renderEnfantsList();
+    }));
+  }
+  renderEnfantsList();
+
+  // Étape 1 : contexte
+  document.querySelectorAll('input[name="context"]').forEach((r) => {
+    r.addEventListener('change', () => { contextSelected = r.value; });
+    if (r.value === contextSelected) r.checked = true;
+  });
+  document.getElementById('onb-next-1').addEventListener('click', () => { showStep(2); document.getElementById('onb-counter').textContent = 'Étape 2 / 4'; });
+
+  // Étape 2 : enfants
+  const addEnfant = () => {
+    const p = document.getElementById('onb-prenom').value.trim();
+    if (!p) { toast('Indique un prénom'); return; }
+    enfantsAccum.push({ prenom: p });
+    document.getElementById('onb-prenom').value = '';
+    renderEnfantsList();
+    toast(p + ' ajouté ✓');
+  };
+  document.getElementById('onb-add-enfant').addEventListener('click', addEnfant);
+  document.getElementById('onb-prenom').addEventListener('keydown', (e) => { if (e.key === 'Enter') addEnfant(); });
+  document.getElementById('onb-back-2').addEventListener('click', () => { showStep(1); document.getElementById('onb-counter').textContent = 'Étape 1 / 4'; });
+  document.getElementById('onb-next-2').addEventListener('click', () => {
+    if (!enfantsAccum.length) { toast('Ajoute au moins un enfant'); return; }
+    showStep(3); document.getElementById('onb-counter').textContent = 'Étape 3 / 4';
+  });
+
+  // Étape 3 : ville + notifs
+  document.getElementById('onb-back-3').addEventListener('click', () => { showStep(2); document.getElementById('onb-counter').textContent = 'Étape 2 / 4'; });
+  document.getElementById('onb-next-3').addEventListener('click', () => {
+    const ville = document.getElementById('onb-ville').value.trim();
+    if (ville) data.reglages.ville = ville;
+    if (document.getElementById('onb-notifs').checked) data.reglages.notifs = true;
+    showStep(4);
+    // Remplir le résumé
+    const ctxLabels = { alternee: 'Garde alternée', seul: 'Parent solo', autre: 'Autre situation' };
+    document.getElementById('onb-recap-context').textContent = ctxLabels[contextSelected] || contextSelected;
+    document.getElementById('onb-recap-enfants').textContent = enfantsAccum.map((e) => e.prenom).join(', ');
+    if (ville) {
+      document.getElementById('onb-recap-ville').style.display = 'block';
+      document.getElementById('onb-recap-ville-text').textContent = ville;
+    }
+    document.getElementById('onb-counter').textContent = 'Étape 4 / 4';
+  });
+
+  // Étape 4 : finish
+  document.getElementById('onb-back-4').addEventListener('click', () => { showStep(3); document.getElementById('onb-counter').textContent = 'Étape 3 / 4'; });
+  document.getElementById('onb-finish').addEventListener('click', finishOnboarding);
+}
+
 function boot() {
   load();
   applyTheme();
+  // Si onboarding pas complété, afficher le wizard et ne pas continuer
+  if (!data.reglages.onboardingDone) {
+    renderOnboarding(document.getElementById('app'));
+    return;
+  }
   if (data.reglages.notifs) notifyToday();
   document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
   document.getElementById('btn-reset').addEventListener('click', openReglages);
