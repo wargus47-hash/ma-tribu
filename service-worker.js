@@ -1,6 +1,6 @@
 // Service worker — Ma Tribu : "réseau d'abord" (toujours la dernière version
 // quand il y a du réseau), cache en secours pour le hors-ligne.
-const CACHE = 'matribu-v23';
+const CACHE = 'matribu-v24';
 const ASSETS = [
   './',
   './index.html',

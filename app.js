@@ -1978,9 +1978,12 @@ const MINUTEUR_PRESETS = [
 function openMinuteur() {
   closeOverlay(); clearInterval(minTimer);
   let remaining = 0, running = false, total = 0;
-  let customMin = 5, customSec = 0;
-  let activeCat = 0;
+  let customMin = 5, customSec = 0, activeCat = 0;
   const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  const RAD = 52, CIRC = +(2 * Math.PI * RAD).toFixed(2); // 326.73
+  const NB_STARS = 10;
+  function ringCol(pct) { return pct > 0.5 ? '#16a34a' : pct > 0.25 ? '#f59e0b' : '#e2553f'; }
+  function face(pct, done) { if (done) return '🎉'; if (!total) return '😊'; if (pct > 0.75) return '😄'; if (pct > 0.5) return '🙂'; if (pct > 0.25) return '😐'; if (pct > 0.08) return '😬'; return '😰'; }
   const ov = document.createElement('div'); ov.className = 'overlay'; document.body.appendChild(ov);
 
   function setTime(s) { remaining = s; total = s; running = false; clearInterval(minTimer); paint(); }
@@ -1988,54 +1991,87 @@ function openMinuteur() {
   function tick() {
     if (remaining > 0) {
       remaining--;
+      const pct = remaining / total;
       const d = ov.querySelector('#mt-disp'); if (d) d.textContent = fmt(remaining);
-      const bar = ov.querySelector('#mt-bar'); if (bar && total > 0) bar.style.width = (1 - remaining / total) * 100 + '%';
+      const ring = ov.querySelector('#mt-ring');
+      if (ring) { ring.style.strokeDashoffset = CIRC * (1 - pct); ring.style.stroke = ringColor(pct); }
+      const fc = ov.querySelector('#mt-face'); if (fc) fc.textContent = face(pct, false);
+      const bar = ov.querySelector('#mt-bar'); if (bar) { bar.style.width = (1 - pct) * 100 + '%'; bar.style.background = ringColor(pct); }
+      const stars = ov.querySelectorAll('.mt-star');
+      const lit = Math.ceil(pct * NB_STARS);
+      stars.forEach((s, i) => { s.style.opacity = i < lit ? '1' : '0.15'; s.style.transform = i < lit ? 'scale(1)' : 'scale(0.65)'; });
       if (remaining === 0) { clearInterval(minTimer); running = false; if (navigator.vibrate) navigator.vibrate([400, 200, 400, 200, 400]); toast('⏰ Temps écoulé !'); paint(); }
     }
   }
+  function ringColor(pct) { return pct > 0.5 ? '#16a34a' : pct > 0.25 ? '#f59e0b' : '#e2553f'; }
 
   function paint() {
-    const pct = total > 0 ? (1 - remaining / total) * 100 : 0;
+    const pct = total > 0 ? remaining / total : 1;
     const done = remaining === 0 && total > 0;
-    ov.innerHTML = `<div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>⏱️ Minuteur</h2></div><div class="overlay-body">
-      <div style="text-align:center;padding:18px 0 10px">
-        <div id="mt-disp" style="font-size:76px;font-weight:800;color:${done ? 'var(--ok)' : 'var(--primary)'};line-height:1;letter-spacing:-2px;font-variant-numeric:tabular-nums">${fmt(remaining)}</div>
-        ${done ? '<div style="color:var(--ok);font-weight:700;margin-top:6px">✅ Temps écoulé !</div>' : ''}
-        <div style="background:var(--line);border-radius:4px;height:7px;margin:14px 0 12px;overflow:hidden"><div id="mt-bar" style="background:var(--primary);height:100%;width:${pct}%;transition:width .8s linear"></div></div>
-        <div class="btn-row" style="justify-content:center">
-          <button class="btn btn-primary" id="mt-start" style="min-width:140px;font-size:16px">${running ? '⏸ Pause' : (remaining > 0 && remaining < total ? '▶ Reprendre' : '▶ Démarrer')}</button>
-          <button class="btn" id="mt-reset" style="font-size:18px" title="Réinitialiser">↻</button>
-        </div>
-      </div>
+    const rc = done ? '#16a34a' : (total === 0 ? 'var(--primary)' : ringColor(pct));
+    const offset = done ? CIRC : CIRC * (1 - pct);
+    const lit = done ? 0 : (total === 0 ? NB_STARS : Math.ceil(pct * NB_STARS));
+    const starsHtml = Array.from({ length: NB_STARS }, (_, i) =>
+      `<span class="mt-star" style="font-size:24px;transition:opacity .35s,transform .35s;opacity:${i < lit ? '1' : '0.15'};transform:${i < lit ? 'scale(1)' : 'scale(0.65)'}">${i < lit ? '⭐' : '☆'}</span>`
+    ).join('');
 
-      <div class="section-title">⌛ Régler le temps manuellement</div>
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:center;gap:14px">
-          <div style="text-align:center">
-            <div class="muted" style="font-size:11px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">min</div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <button class="btn btn-mini" data-adj="m-" style="font-size:18px;padding:6px 13px">−</button>
-              <span id="mt-cmin" style="font-size:30px;font-weight:800;min-width:46px;text-align:center;font-variant-numeric:tabular-nums">${String(customMin).padStart(2, '0')}</span>
-              <button class="btn btn-mini" data-adj="m+" style="font-size:18px;padding:6px 13px">+</button>
+    ov.innerHTML = `
+      <style>@keyframes mtBounce{0%,100%{transform:scale(1)}40%{transform:scale(1.3)}70%{transform:scale(.9)}}.mt-bounce{animation:mtBounce .6s ease}</style>
+      <div class="overlay-head"><button class="overlay-close" data-close>✕</button><h2>⏱️ Minuteur</h2></div>
+      <div class="overlay-body">
+        <div style="text-align:center;padding:10px 0 4px">
+
+          <svg viewBox="0 0 120 120" width="180" height="180" style="display:block;margin:0 auto;overflow:visible">
+            <circle cx="60" cy="60" r="${RAD}" fill="none" stroke="var(--line)" stroke-width="11"/>
+            <circle id="mt-ring" cx="60" cy="60" r="${RAD}" fill="none" stroke="${rc}" stroke-width="11"
+              stroke-dasharray="${CIRC}" stroke-dashoffset="${offset}" stroke-linecap="round"
+              transform="rotate(-90 60 60)" style="transition:stroke-dashoffset .9s linear,stroke .5s"/>
+            <text id="mt-face" x="60" y="72" text-anchor="middle" font-size="44" class="${done ? 'mt-bounce' : ''}">${face(pct, done)}</text>
+          </svg>
+
+          <div style="display:flex;justify-content:center;gap:5px;margin:6px 0 8px" id="mt-stars">${starsHtml}</div>
+
+          <div id="mt-disp" style="font-size:54px;font-weight:800;color:${done ? '#16a34a' : 'var(--ink)'};line-height:1.1;letter-spacing:-1px;font-variant-numeric:tabular-nums">${fmt(remaining)}</div>
+          ${done ? `<div style="color:#16a34a;font-weight:700;font-size:17px;margin:4px 0">✅ C'est fini !</div>` : ''}
+
+          <div style="background:var(--line);border-radius:4px;height:6px;margin:12px 16px 14px;overflow:hidden">
+            <div id="mt-bar" style="height:100%;width:${done ? '100' : (1 - pct) * 100}%;background:${rc};transition:width .9s linear,background .5s"></div>
+          </div>
+
+          <div class="btn-row" style="justify-content:center">
+            <button class="btn btn-primary" id="mt-start" style="min-width:140px;font-size:16px">${running ? '⏸ Pause' : (remaining > 0 && remaining < total ? '▶ Reprendre' : '▶ Démarrer')}</button>
+            <button class="btn" id="mt-reset" style="font-size:18px" title="Réinitialiser">↻</button>
+          </div>
+        </div>
+
+        <div class="section-title">⌛ Régler le temps</div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:center;gap:14px">
+            <div style="text-align:center">
+              <div class="muted" style="font-size:11px;margin-bottom:6px;text-transform:uppercase">min</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <button class="btn btn-mini" data-adj="m-" style="font-size:18px;padding:6px 13px">−</button>
+                <span id="mt-cmin" style="font-size:30px;font-weight:800;min-width:46px;text-align:center;font-variant-numeric:tabular-nums">${String(customMin).padStart(2, '0')}</span>
+                <button class="btn btn-mini" data-adj="m+" style="font-size:18px;padding:6px 13px">+</button>
+              </div>
+            </div>
+            <div style="font-size:34px;font-weight:800;padding-top:18px;color:var(--muted)">:</div>
+            <div style="text-align:center">
+              <div class="muted" style="font-size:11px;margin-bottom:6px;text-transform:uppercase">sec</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <button class="btn btn-mini" data-adj="s-" style="font-size:18px;padding:6px 13px">−</button>
+                <span id="mt-csec" style="font-size:30px;font-weight:800;min-width:46px;text-align:center;font-variant-numeric:tabular-nums">${String(customSec).padStart(2, '0')}</span>
+                <button class="btn btn-mini" data-adj="s+" style="font-size:18px;padding:6px 13px">+</button>
+              </div>
             </div>
           </div>
-          <div style="font-size:34px;font-weight:800;padding-top:18px;color:var(--muted)">:</div>
-          <div style="text-align:center">
-            <div class="muted" style="font-size:11px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">sec</div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <button class="btn btn-mini" data-adj="s-" style="font-size:18px;padding:6px 13px">−</button>
-              <span id="mt-csec" style="font-size:30px;font-weight:800;min-width:46px;text-align:center;font-variant-numeric:tabular-nums">${String(customSec).padStart(2, '0')}</span>
-              <button class="btn btn-mini" data-adj="s+" style="font-size:18px;padding:6px 13px">+</button>
-            </div>
-          </div>
+          <button class="btn btn-primary btn-block" id="mt-set" style="margin-top:14px">▶ Démarrer ce temps</button>
         </div>
-        <button class="btn btn-primary btn-block" id="mt-set" style="margin-top:14px">▶ Démarrer ce temps</button>
-      </div>
 
-      <div class="section-title">Suggestions</div>
-      <div class="chips" style="margin-bottom:10px">${MINUTEUR_PRESETS.map((c, i) => `<button class="chip ${i === activeCat ? 'on' : ''}" data-cat="${i}">${c.cat}</button>`).join('')}</div>
-      <div class="card"><div class="chips">${MINUTEUR_PRESETS[activeCat].items.map((p) => `<button class="chip" data-sec="${p.sec}" style="flex-direction:column;align-items:flex-start;line-height:1.3">${esc(p.label)}<br><span class="muted" style="font-size:11px">${fmt(p.sec)}</span></button>`).join('')}</div></div>
-    </div>`;
+        <div class="section-title">Suggestions</div>
+        <div class="chips" style="margin-bottom:10px">${MINUTEUR_PRESETS.map((c, i) => `<button class="chip ${i === activeCat ? 'on' : ''}" data-cat="${i}">${c.cat}</button>`).join('')}</div>
+        <div class="card"><div class="chips">${MINUTEUR_PRESETS[activeCat].items.map((p) => `<button class="chip" data-sec="${p.sec}" style="flex-direction:column;align-items:flex-start;line-height:1.3">${esc(p.label)}<br><span class="muted" style="font-size:11px">${fmt(p.sec)}</span></button>`).join('')}</div></div>
+      </div>`;
 
     ov.querySelector('[data-close]').addEventListener('click', () => { clearInterval(minTimer); closeOverlay(); render(); });
     ov.querySelector('#mt-start').addEventListener('click', () => {
@@ -2045,13 +2081,10 @@ function openMinuteur() {
     });
     ov.querySelector('#mt-reset').addEventListener('click', () => { running = false; clearInterval(minTimer); remaining = total; paint(); });
     ov.querySelector('#mt-set').addEventListener('click', () => setTime(customMin * 60 + customSec || 60));
-
     ov.querySelectorAll('[data-adj]').forEach((b) => b.addEventListener('click', () => {
       const a = b.dataset.adj;
-      if (a === 'm+') customMin = Math.min(99, customMin + 1);
-      else if (a === 'm-') customMin = Math.max(0, customMin - 1);
-      else if (a === 's+') customSec = customSec >= 55 ? 0 : customSec + 5;
-      else if (a === 's-') customSec = customSec <= 0 ? 55 : customSec - 5;
+      if (a === 'm+') customMin = Math.min(99, customMin + 1); else if (a === 'm-') customMin = Math.max(0, customMin - 1);
+      else if (a === 's+') customSec = customSec >= 55 ? 0 : customSec + 5; else if (a === 's-') customSec = customSec <= 0 ? 55 : customSec - 5;
       const dm = ov.querySelector('#mt-cmin'); if (dm) dm.textContent = String(customMin).padStart(2, '0');
       const ds = ov.querySelector('#mt-csec'); if (ds) ds.textContent = String(customSec).padStart(2, '0');
     }));
