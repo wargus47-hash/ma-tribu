@@ -2160,7 +2160,7 @@ function openBarkley() {
     const show = Math.min(j, 20), empty = Math.max(0, Math.min(goal, 20) - show);
     const over = j > 20 ? ' <b style="color:var(--primary)">+' + (j - 20) + '</b>' : '';
     const sz = bk.ageGroup === 'petit' ? 28 : 22;
-    return '<span style="font-size:' + sz + 'px;line-height:1.5;word-break:break-all">⭐'.repeat(show) + '<span style="opacity:.2">⭐'.repeat(empty) + '</span></span>' + over;
+    return '<span style="font-size:' + sz + 'px;line-height:1.5;word-break:break-all">' + '⭐'.repeat(show) + '<span style="opacity:.2">' + '⭐'.repeat(empty) + '</span></span>' + over;
   }
 
   function updateTokensDOM() {
