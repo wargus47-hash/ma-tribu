@@ -4,6 +4,7 @@
    ============================================================ */
 
 const STORE_KEY = 'matribu_v1';
+const APP_BUILD = 'v25';
 
 const RAYONS = [
   'Fruits & Légumes', 'Frais', 'Viande & Poisson', 'Surgelés',
@@ -977,7 +978,11 @@ function openReglages() {
           <div class="opt-row"><span>🔔 Notifications<br><span class="muted" style="font-weight:400;font-size:12px">Résumé du jour à l'ouverture de l'appli</span></span><button class="toggle ${data.reglages.notifs ? 'on' : ''}" id="op-notif"><i></i></button></div>
         </div>
       </div>
-      <p class="muted" style="text-align:center">Ma Tribu · v6 · 100 % sur ton appareil</p>
+      <div class="card" style="text-align:center;margin-top:8px">
+        <div class="muted" style="font-size:12px;margin-bottom:8px">Ma Tribu · build ${APP_BUILD} · 100 % sur ton appareil</div>
+        <button class="btn btn-primary btn-block" id="set-update">🔄 Vérifier les mises à jour</button>
+        <div class="muted" style="font-size:11px;margin-top:6px">Si l'appli ne se met pas à jour, appuie ici puis ferme et rouvre l'appli.</div>
+      </div>
     </div>`;
   document.body.appendChild(ov);
   ov.querySelector('[data-close]').addEventListener('click', () => { closeOverlay(); render(); });
@@ -996,6 +1001,15 @@ function openReglages() {
   ov.querySelector('#set-consignes-save').addEventListener('click', () => { data.reglages.consignesSitter = ov.querySelector('#set-consignes').value.trim(); save(); toast('Consignes enregistrées'); });
   ov.querySelector('#set-coffre').addEventListener('click', openCoffre);
   ov.querySelector('#set-ville-save').addEventListener('click', () => { data.reglages.ville = ov.querySelector('#set-ville').value.trim(); weatherCache = null; save(); toast('Ville enregistrée'); });
+  ov.querySelector('#set-update').addEventListener('click', () => {
+    toast('🔄 Vérification en cours…');
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then((reg) => {
+        if (reg) reg.update().then(() => { setTimeout(() => location.reload(true), 800); });
+        else location.reload(true);
+      });
+    } else { location.reload(true); }
+  });
 }
 function exportData() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
